@@ -1,0 +1,211 @@
+﻿<Page x:Class="StageX_DesktopApp.TheaterSeatPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Quản lý Rạp và Ghế"
+      Background="#FF1A1A1A" Foreground="White"
+      Loaded="Page_Loaded">
+
+    <Page.Resources>
+        <Style x:Key="ButtonAddStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF198754"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="ButtonEditStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF0D6EFD"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style x:Key="ButtonDeleteStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFDC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+        <Style x:Key="ButtonSaveStyle" TargetType="Button" BasedOn="{StaticResource ButtonEditStyle}">
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+        <Style x:Key="ButtonCancelStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF6C757D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+        <Style x:Key="ButtonSpecialStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFffc107"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Quản lý Rạp, Ghế &amp; Hạng ghế" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.3*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+                <StackPanel>
+                    <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Tạo rạp" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="Tên rạp:" Margin="0,5,0,5"/>
+                            <TextBox x:Name="AddTheaterNameTextBox" Padding="8"/>
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                    <TextBlock Text="Số hàng:" Margin="0,5,0,5"/>
+                                    <TextBox x:Name="AddTheaterRowsTextBox" Padding="8"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                    <TextBlock Text="Số cột:" Margin="0,5,0,5"/>
+                                    <TextBox x:Name="AddTheaterColsTextBox" Padding="8"/>
+                                </StackPanel>
+                            </Grid>
+                            <Button x:Name="AddTheaterButton" Content="Tạo" Style="{StaticResource ButtonAddStyle}" Margin="0,15,0,0" Click="AddTheaterButton_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,10,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Quản lý hạng ghế" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBox x:Name="AddCategoryNameTextBox" Text="Tên hạng ghế" Foreground="Gray" GotFocus="Placeholder_GotFocus" LostFocus="AddCategoryNameTextBox_LostFocus" Padding="8" Margin="0,5,0,0"/>
+                            <TextBox x:Name="AddCategoryPriceTextBox" Text="Giá cơ bản" Foreground="Gray" GotFocus="Placeholder_GotFocus" LostFocus="AddCategoryPriceTextBox_LostFocus" Padding="8" Margin="0,5,0,0"/>
+                            <Button x:Name="AddCategoryButton" Content="Thêm hạng ghế" Style="{StaticResource ButtonAddStyle}" Margin="0,15,0,0" Click="AddCategoryButton_Click"/>
+
+                            <DataGrid x:Name="CategoriesGrid" MaxHeight="200" Margin="0,15,0,0"
+                      IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
+                      LoadingRow="CategoriesGrid_LoadingRow" HeadersVisibility="Column, Row">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding CategoryId}" Width="30" Visibility="Collapsed"/>
+                                    <DataGridTextColumn Header="Tên Hạng" Binding="{Binding CategoryName}" Width="*"/>
+                                    <DataGridTextColumn Header="Giá" Binding="{Binding BasePrice, StringFormat='N0'}" Width="Auto"/>
+
+                                    <DataGridTemplateColumn Header="Màu" Width="50">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding DisplayColor}" 
+                                        Width="20" Height="20" 
+                                        CornerRadius="3" 
+                                        BorderBrush="Gray" BorderThickness="1"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="EditTheaterPanel" Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,10,0,10" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Chỉnh sửa rạp và quản lý kích thước" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBox x:Name="EditTheaterIdTextBox" Visibility="Collapsed"/>
+                            <TextBlock Text="Tên rạp:" Margin="0,5,0,5"/>
+                            <TextBox x:Name="EditTheaterNameTextBox" Padding="8"/>
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                    <TextBlock Text="Số lượng cột thêm:" Margin="0,5,0,5"/>
+                                    <TextBox x:Name="ModifyColsTextBox" Text="0" Padding="8"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                    <TextBlock Text="Số lượng hàng thêm:" Margin="0,5,0,5"/>
+                                    <TextBox x:Name="ModifyRowsTextBox" Text="0" Padding="8"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                <Button x:Name="SaveTheaterButton" Content="Lưu thay đổi" Style="{StaticResource ButtonSaveStyle}" Click="SaveTheaterButton_Click"/>
+                                <Button x:Name="CancelEditButton" Content="Hủy" Style="{StaticResource ButtonCancelStyle}" Margin="10,0,0,0" Click="CancelEditButton_Click"/>
+                            </StackPanel>
+
+                            <TextBlock Text="Quản lý ghế" FontSize="16" FontWeight="SemiBold" Margin="0,20,0,10"/>
+                            <TextBlock Text="Hạng ghế:" Margin="0,5,0,5"/>
+                            <ComboBox x:Name="AssignCategoryComboBox" DisplayMemberPath="CategoryName" SelectedValuePath="CategoryId" Padding="8"/>
+
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                    <TextBlock Text="Hàng:" Margin="0,5,0,5"/>
+                                    <ComboBox x:Name="AssignRowComboBox" Padding="8"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,5,0">
+                                    <TextBlock Text="Ghế bắt đầu:" Margin="0,5,0,5"/>
+                                    <ComboBox x:Name="AssignSeatStartComboBox" Padding="8"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="5,0,0,0">
+                                    <TextBlock Text="Ghế kết thúc:" Margin="0,5,0,5"/>
+                                    <ComboBox x:Name="AssignSeatEndComboBox" Padding="8"/>
+                                </StackPanel>
+                            </Grid>
+                            <Button x:Name="AssignSeatButton" Content="Đổi" Style="{StaticResource ButtonSpecialStyle}" Foreground="Black" Margin="0,15,0,0" Click="AssignSeatButton_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#FF27324A"/>
+
+            <Grid Grid.Column="2" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#FF0C1220" CornerRadius="5" Padding="15" MinHeight="200">
+                    <StackPanel>
+                        <TextBlock x:Name="SeatMapTitle" Text="Sơ đồ ghế cho rạp..." FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <WrapPanel x:Name="SeatMapWrapPanel">
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Grid.Row="1" Text="Danh sách rạp" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,10"/>
+
+                <DataGrid Grid.Row="2" x:Name="TheatersGrid"
+                          IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
+                          LoadingRow="TheatersGrid_LoadingRow" HeadersVisibility="Column, Row"
+                          SelectionChanged="TheatersGrid_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding TheaterId}" Width="50" Visibility="Collapsed"/>
+                        <DataGridTextColumn Header="Tên Rạp" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="Sức chứa" Binding="{Binding TotalSeats}" Width="Auto"/>
+                        <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button x:Name="EditTheaterButton" Content="Sơ đồ" Style="{StaticResource ButtonSpecialStyle}" Margin="0,0,5,0" Click="EditTheaterButton_Click"/>
+                                        <Button x:Name="DeleteTheaterButton" Content="Xóa" Style="{StaticResource ButtonDeleteStyle}" Click="DeleteTheaterButton_Click"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>
