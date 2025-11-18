@@ -8,6 +8,7 @@ namespace StageX_DesktopApp
     {
         // Ghi chú: Khai báo các trang (Pages)
         // (Sẽ báo lỗi đỏ cho đến khi chúng ta tạo các file này)
+        private DashboardPage _dashboardManagementPage;
         private GenreManagementPage _genreManagementPage;
         private ShowManagementPage _showManagementPage;
         private ProfilePage _profilePage;
@@ -22,7 +23,8 @@ namespace StageX_DesktopApp
 
             // Ghi chú: Khởi tạo các trang
             //(Tạm thời vô hiệu hóa cho đến khi tạo file)
-             _genreManagementPage = new GenreManagementPage();
+            _dashboardManagementPage = new DashboardPage();
+            _genreManagementPage = new GenreManagementPage();
             _showManagementPage = new ShowManagementPage();
             _profilePage = new ProfilePage();
             _seatCategoryPage = new SeatCategoryPage();
@@ -102,12 +104,11 @@ namespace StageX_DesktopApp
         private void AttachClickEvents()
         {
             // === Nhóm Admin ===
-            NavDashboard.Click += (s, e) => MessageBox.Show("Sẽ mở trang Dashboard...");
+            NavDashboard.Click += (s, e) => MainContentFrame.Navigate(_dashboardManagementPage);
             NavAdminBookingMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Tra cứu Đơn hàng (Admin)...");
             //(Vô hiệu hóa 2 dòng này cho đến khi tạo Page)
             NavGenreMgmt.Click += (s, e) => MainContentFrame.Navigate(_genreManagementPage);
             NavShowMgmt.Click += (s, e) => MainContentFrame.Navigate(_showManagementPage);
-            NavTheaterMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Rạp/Ghế...");
             NavAccountMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Tài khoản...");
             NavTheaterMgmt.Click += (s, e) => MainContentFrame.Navigate(_theaterSeatPage);
             NavPerformanceMgmt.Click += (s, e) => MainContentFrame.Navigate(_performancePage);

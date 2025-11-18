@@ -1,0 +1,43 @@
+﻿using System;
+
+namespace StageX_DesktopApp.Models
+{
+    /// <summary>
+    /// Các lớp dữ liệu phục vụ hiển thị bảng điều khiển.
+    /// Các thuộc tính khớp với tên cột trả về từ thủ tục lưu trữ trong cơ sở dữ liệu.
+    /// </summary>
+    public class DashboardSummary
+    {
+        public decimal total_revenue { get; set; }
+        public int total_bookings { get; set; }
+        public int total_shows { get; set; }
+        public int total_genres { get; set; }
+    }
+
+    public class RevenueMonthly
+    {
+        public string month { get; set; } = string.Empty;
+        public decimal total_revenue { get; set; }
+    }
+
+    public class TicketSold
+    {
+        public string period { get; set; } = string.Empty;
+        public long sold_tickets { get; set; }
+    }
+
+    public class TopShow
+    {
+        public string show_name { get; set; } = string.Empty;
+        public long sold_tickets { get; set; }
+    }
+
+    /// <summary>
+    /// Phân bố đánh giá theo sao. Thuộc tính star (1-5) và rating_count.
+    /// </summary>
+    public class RatingDistribution
+    {
+        public int star { get; set; }
+        public long rating_count { get; set; }
+    }
+}

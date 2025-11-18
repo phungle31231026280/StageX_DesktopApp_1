@@ -21,6 +21,15 @@ namespace StageX_DesktopApp
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
+
+        // Các DbSet không ánh xạ tới bảng thực tế, dùng cho thống kê (dashboard)
+        public DbSet<DashboardSummary> DashboardSummaries { get; set; }
+        public DbSet<RevenueMonthly> RevenueMonthlies { get; set; }
+        public DbSet<TicketSold> TicketSolds { get; set; }
+        public DbSet<TopShow> TopShows { get; set; }
+
+        // Phân bố đánh giá theo sao. Lớp này phục vụ biểu đồ donut
+        public DbSet<RatingDistribution> RatingDistributions { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             string connectionString = "Server=localhost;Database=stagex_db;User=root;Password=;";
@@ -79,6 +88,13 @@ namespace StageX_DesktopApp
                .HasOne(b => b.Performance)
                .WithMany()
                .HasForeignKey(b => b.PerformanceId);
+
+            // Định nghĩa các thực thể không có khóa cho truy vấn báo cáo
+            modelBuilder.Entity<DashboardSummary>().HasNoKey().ToView(null);
+            modelBuilder.Entity<RevenueMonthly>().HasNoKey().ToView(null);
+            modelBuilder.Entity<TicketSold>().HasNoKey().ToView(null);
+            modelBuilder.Entity<TopShow>().HasNoKey().ToView(null);
+            modelBuilder.Entity<RatingDistribution>().HasNoKey().ToView(null);
         }
     }
 }
