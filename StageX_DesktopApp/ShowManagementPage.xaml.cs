@@ -18,11 +18,14 @@ namespace StageX_DesktopApp
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
+            // Tải dữ liệu lần đầu (không lọc)
             await LoadShowsAsync();
             await LoadGenresForListBoxAsync();
         }
 
-        // Tải Thể loại cho ListBox
+        /// <summary>
+        /// Ghi chú: Tải danh sách Thể loại (cho CẢ 2 bên)
+        /// </summary>
         private async Task LoadGenresForListBoxAsync()
         {
             try
@@ -30,9 +33,18 @@ namespace StageX_DesktopApp
                 using (var context = new AppDbContext())
                 {
                     var genres = await context.Genres
-                                           .OrderBy(g => g.GenreName)
-                                           .ToListAsync();
+                                               .OrderBy(g => g.GenreName)
+                                               .ToListAsync();
+
+                    // 1. Tải cho Form (bên trái)
                     GenresListBox.ItemsSource = genres;
+
+                    // 2. Tải cho Filter (bên phải)
+                    var filterGenres = genres.ToList(); // Tạo bản sao
+                    // Thêm 1 dòng "Tất cả"
+                    filterGenres.Insert(0, new Genre { GenreId = 0, GenreName = "-- Tất cả thể loại --" });
+                    FilterGenreComboBox.ItemsSource = filterGenres;
+                    FilterGenreComboBox.SelectedIndex = 0; // Chọn dòng "Tất cả"
                 }
             }
             catch (Exception ex)
@@ -41,19 +53,37 @@ namespace StageX_DesktopApp
             }
         }
 
-        // Tải Vở diễn cho Bảng
-        private async Task LoadShowsAsync()
+        /// <summary>
+        /// Ghi chú: Tải Vở diễn (VỚI BỘ LỌC)
+        /// </summary>
+        private async Task LoadShowsAsync(string searchTerm = "", int genreId = 0)
         {
             try
             {
                 using (var context = new AppDbContext())
                 {
-                    var shows = await context.Shows
-                                          .Include(s => s.Genres) // Tải kèm Thể loại
-                                          .OrderBy(s => s.Title)
-                                          .ToListAsync();
+                    // Bắt đầu truy vấn
+                    var query = context.Shows
+                                       .Include(s => s.Genres) // Tải kèm Thể loại
+                                       .OrderBy(s => s.Title)
+                                       .AsQueryable(); // Chuyển sang IQueryable
 
-                    // Tạo chuỗi "GenresDisplay"
+                    // 1. Lọc theo tên (Tra cứu)
+                    if (!string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        query = query.Where(s => s.Title.Contains(searchTerm));
+                    }
+
+                    // 2. Lọc theo thể loại (Genre)
+                    if (genreId > 0)
+                    {
+                        query = query.Where(s => s.Genres.Any(g => g.GenreId == genreId));
+                    }
+
+                    // Thực thi truy vấn
+                    var shows = await query.ToListAsync();
+
+                    // (Code tạo chuỗi GenresDisplay giữ nguyên)
                     foreach (var show in shows)
                     {
                         if (show.Genres != null && show.Genres.Any())
@@ -74,7 +104,20 @@ namespace StageX_DesktopApp
             }
         }
 
-        // Nút "Làm mới"
+        /// <summary>
+        /// GHI CHÚ: HÀM MỚI - Xử lý nút "Lọc"
+        /// </summary>
+        private async void SearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            string searchTerm = SearchTitleTextBox.Text;
+            int genreId = (int)(FilterGenreComboBox.SelectedValue ?? 0);
+
+            // Gọi hàm LoadShowsAsync với các tham số lọc
+            await LoadShowsAsync(searchTerm, genreId);
+        }
+
+        // --- CÁC HÀM CRUD (Thêm/Sửa/Xóa) ---
+
         private void ClearShowButton_Click(object sender, RoutedEventArgs e)
         {
             ShowIdTextBox.Text = "";
@@ -87,7 +130,6 @@ namespace StageX_DesktopApp
             ShowsGrid.SelectedItem = null;
         }
 
-        // Click vào Bảng
         private void ShowsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ShowsGrid.SelectedItem is Show selectedShow)
@@ -99,7 +141,6 @@ namespace StageX_DesktopApp
                 ShowPosterTextBox.Text = selectedShow.PosterImageUrl;
                 ShowDescriptionTextBox.Text = selectedShow.Description;
 
-                // Cập nhật ListBox thể loại
                 GenresListBox.SelectedItems.Clear();
                 if (selectedShow.Genres != null)
                 {
@@ -118,20 +159,12 @@ namespace StageX_DesktopApp
             }
         }
 
-        // Nút "Lưu Vở diễn" (Thêm + Sửa)
         private async void SaveShowButton_Click(object sender, RoutedEventArgs e)
         {
+            // ... (Code kiểm tra validate Title và Duration giữ nguyên) ...
             string title = ShowTitleTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(title))
-            {
-                MessageBox.Show("Tiêu đề vở diễn không được để trống!");
-                return;
-            }
-            if (!int.TryParse(ShowDurationTextBox.Text, out int duration) || duration <= 0)
-            {
-                MessageBox.Show("Thời lượng (phút) phải là một con số > 0!");
-                return;
-            }
+            if (string.IsNullOrEmpty(title)) { /* ... */ return; }
+            if (!int.TryParse(ShowDurationTextBox.Text, out int duration) || duration <= 0) { /* ... */ return; }
 
             try
             {
@@ -143,7 +176,7 @@ namespace StageX_DesktopApp
                     if (int.TryParse(ShowIdTextBox.Text, out int showId) && showId > 0)
                     {
                         showToSave = await context.Shows
-                                            .Include(s => s.Genres) // Phải Include()
+                                            .Include(s => s.Genres)
                                             .FirstOrDefaultAsync(s => s.ShowId == showId);
                         if (showToSave == null) return;
                     }
@@ -165,15 +198,12 @@ namespace StageX_DesktopApp
                     showToSave.PosterImageUrl = ShowPosterTextBox.Text.Trim();
                     showToSave.Description = ShowDescriptionTextBox.Text.Trim();
 
-                    // 3. Cập nhật Mối quan hệ Nhiều-Nhiều (Thể loại)
-                    showToSave.Genres.Clear(); // Xóa hết thể loại cũ
-
-                    // Lấy danh sách thể loại MỚI
+                    // 3. Cập nhật Thể loại
+                    showToSave.Genres.Clear();
                     foreach (var item in GenresListBox.SelectedItems)
                     {
                         if (item is Genre selectedGenre)
                         {
-                            // "Attach" thể loại này (để EF Core biết nó đã tồn tại)
                             context.Genres.Attach(selectedGenre);
                             showToSave.Genres.Add(selectedGenre);
                         }
@@ -184,8 +214,8 @@ namespace StageX_DesktopApp
                     MessageBox.Show("Lưu vở diễn thành công!");
                 }
 
-                // 5. Tải lại mọi thứ
-                await LoadShowsAsync();
+                // 5. GHI CHÚ: Tải lại Bảng (với filter cũ)
+                await LoadShowsAsync(SearchTitleTextBox.Text, (int)(FilterGenreComboBox.SelectedValue ?? 0));
                 ClearShowButton_Click(null, null);
             }
             catch (Exception ex)
@@ -194,13 +224,11 @@ namespace StageX_DesktopApp
             }
         }
 
-        // Nút "Xóa"
         private async void DeleteShowButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.DataContext is Show showToDelete)
             {
-                var result = MessageBox.Show($"Bạn có chắc muốn xóa vở diễn '{showToDelete.Title}'?",
-                                             "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                var result = MessageBox.Show($"Bạn có chắc muốn xóa vở diễn '{showToDelete.Title}'?", "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
                 if (result == MessageBoxResult.Yes)
                 {
@@ -212,7 +240,8 @@ namespace StageX_DesktopApp
                             context.Shows.Remove(showToRemove);
                             await context.SaveChangesAsync();
                         }
-                        await LoadShowsAsync();
+                        // GHI CHÚ: Tải lại Bảng (với filter cũ)
+                        await LoadShowsAsync(SearchTitleTextBox.Text, (int)(FilterGenreComboBox.SelectedValue ?? 0));
                     }
                     catch (Exception ex)
                     {

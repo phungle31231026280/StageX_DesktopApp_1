@@ -13,6 +13,8 @@ namespace StageX_DesktopApp
         private ProfilePage _profilePage;
         private SeatCategoryPage _seatCategoryPage;
         private TheaterSeatPage _theaterSeatPage;
+        private PerformancePage _performancePage;
+        private AccountPage _accountPage;
 
         public MainWindow()
         {
@@ -25,6 +27,8 @@ namespace StageX_DesktopApp
             _profilePage = new ProfilePage();
             _seatCategoryPage = new SeatCategoryPage();
             _theaterSeatPage = new TheaterSeatPage();
+            _performancePage = new PerformancePage();
+            _accountPage = new AccountPage();
 
             // Chạy hàm phân quyền (ẩn/hiện nút)
             LoadUserInfo();
@@ -104,9 +108,10 @@ namespace StageX_DesktopApp
             NavGenreMgmt.Click += (s, e) => MainContentFrame.Navigate(_genreManagementPage);
             NavShowMgmt.Click += (s, e) => MainContentFrame.Navigate(_showManagementPage);
             NavTheaterMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Rạp/Ghế...");
-            NavPerformanceMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Suất diễn...");
             NavAccountMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Tài khoản...");
             NavTheaterMgmt.Click += (s, e) => MainContentFrame.Navigate(_theaterSeatPage);
+            NavPerformanceMgmt.Click += (s, e) => MainContentFrame.Navigate(_performancePage);
+            NavAccountMgmt.Click += (s, e) => MainContentFrame.Navigate(_accountPage);
 
             // === Nhóm Nhân viên ===
             NavSellTicket.Click += (s, e) => MessageBox.Show("Sẽ mở trang Bán vé...");

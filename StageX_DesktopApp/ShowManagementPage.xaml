@@ -63,10 +63,35 @@
         <Grid Grid.Column="2" Margin="10,0,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="DANH SÁCH VỞ DIỄN" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-            <DataGrid Grid.Row="1"
+
+            <Border Grid.Row="0" Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Tra cứu theo tên:" Margin="0,0,10,5" Foreground="Gray"/>
+                    <TextBox x:Name="SearchTitleTextBox" Grid.Row="1" Grid.Column="0" Padding="5" FontSize="14" Margin="0,0,10,0"/>
+
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Lọc theo thể loại:" Margin="0,0,10,5" Foreground="Gray"/>
+                    <ComboBox x:Name="FilterGenreComboBox" Grid.Row="1" Grid.Column="1" Padding="5" DisplayMemberPath="GenreName" SelectedValuePath="GenreId" Margin="0,0,10,0"/>
+
+                    <Button x:Name="SearchButton" Grid.Row="1" Grid.Column="2" Content="Lọc" Style="{StaticResource ButtonAddStyle}" VerticalAlignment="Bottom" Click="SearchButton_Click"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="1" Text="DANH SÁCH VỞ DIỄN" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+            <DataGrid Grid.Row="2"
                       x:Name="ShowsGrid"
                       IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
                       LoadingRow="ShowsGrid_LoadingRow" HeadersVisibility="Column, Row"

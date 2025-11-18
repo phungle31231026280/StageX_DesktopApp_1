@@ -1,0 +1,150 @@
+﻿<Page x:Class="StageX_DesktopApp.PerformancePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Title="Quản lý Suất diễn"
+      Background="#FF1A1A1A" Foreground="White"
+      Loaded="Page_Loaded">
+
+    <Page.Resources>
+        <Style x:Key="ButtonAddStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF198754"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="ButtonEditStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF0D6EFD"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style x:Key="ButtonDeleteStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFDC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Quản lý suất diễn" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <Border Grid.Row="1" Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock x:Name="FormTitle" Text="Thêm suất diễn" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#FFffc107"/>
+                <TextBox x:Name="PerformanceIdTextBox" Visibility="Collapsed"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Vở diễn:" Margin="0,5,0,5" Foreground="Gray"/>
+                        <ComboBox x:Name="ShowComboBox" DisplayMemberPath="Title" SelectedValuePath="ShowId" Padding="8"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="5,0,5,0">
+                        <TextBlock Text="Rạp:" Margin="0,5,0,5" Foreground="Gray"/>
+                        <ComboBox x:Name="TheaterComboBox" DisplayMemberPath="Name" SelectedValuePath="TheaterId" Padding="8"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                        <TextBlock Text="Ngày diễn (dd/mm/yyyy):" Margin="0,5,0,5" Foreground="Gray"/>
+                        <DatePicker x:Name="PerformanceDatePicker" Padding="6" FontSize="14"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Giờ bắt đầu (HH:mm):" Margin="0,5,0,5" Foreground="Gray"/>
+                        <TextBox x:Name="StartTimeTextBox" Padding="8" FontSize="14"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="5,0,5,0">
+                        <TextBlock Text="Giá vé (VNĐ):" Margin="0,5,0,5" Foreground="Gray"/>
+                        <TextBox x:Name="PriceTextBox" Padding="8" FontSize="14"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                        <TextBlock Text="Trạng thái:" Margin="0,5,0,5" Foreground="Gray"/>
+                        <ComboBox x:Name="StatusComboBox" Padding="8">
+                            <ComboBoxItem Content="Đang mở bán"/>
+                            <ComboBoxItem Content="Đã hủy"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <Button x:Name="SaveButton" Content="Thêm suất diễn" Style="{StaticResource ButtonAddStyle}" Click="SaveButton_Click"/>
+                        <Button x:Name="ClearButton" Content="Hủy" Margin="10,0,0,0" Padding="10,5" Click="ClearButton_Click" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Bottom">
+                    <TextBlock Text="Tra cứu theo tên vở diễn:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <TextBox x:Name="SearchShowNameTextBox" Padding="5" FontSize="14" TextChanged="SearchShowNameTextBox_TextChanged"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="5,0,5,0" VerticalAlignment="Bottom">
+                    <TextBlock Text="Lọc theo rạp:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <ComboBox x:Name="FilterTheaterComboBox" DisplayMemberPath="Name" SelectedValuePath="TheaterId" Padding="5" Height="31" Width="77"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Bottom">
+                    <TextBlock Text="Tra cứu theo ngày:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <DatePicker x:Name="FilterDatePicker" Padding="3" FontSize="14" Height="31" Width="119"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button x:Name="SearchButton" Content="Lọc" Style="{StaticResource ButtonAddStyle}" Click="SearchButton_Click" Height="30" Width="48"/>
+                    <Button x:Name="ClearFilterButton" Content="Xóa lọc" Margin="10,0,0,0" Padding="10,5" Click="ClearFilterButton_Click" Width="73"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="3" Text="Danh sách suất diễn" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+        <DataGrid Grid.Row="4"
+                  x:Name="PerformancesGrid"
+                  IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
+                  LoadingRow="PerformancesGrid_LoadingRow" HeadersVisibility="Column, Row">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding PerformanceId}" Width="50" Visibility="Collapsed"/>
+                <DataGridTextColumn Header="Vở diễn" Binding="{Binding ShowTitle}" Width="2*"/>
+                <DataGridTextColumn Header="Rạp" Binding="{Binding TheaterName}" Width="*"/>
+                <DataGridTextColumn Header="Ngày" Binding="{Binding PerformanceDate, StringFormat='dd/MM/yyyy'}" Width="Auto"/>
+                <DataGridTextColumn Header="Bắt đầu" Binding="{Binding StartTime, StringFormat='hh\\:mm'}" Width="Auto"/>
+                <DataGridTextColumn Header="Giá vé (VNĐ)" Binding="{Binding Price, StringFormat='N0'}" Width="Auto"/>
+                <DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="Auto"/>
+                <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="EditButton" Content="Chỉnh sửa" Style="{StaticResource ButtonEditStyle}" Click="EditButton_Click"/>
+                                <Button x:Name="DeleteButton" Content="Xóa" Style="{StaticResource ButtonDeleteStyle}" Click="DeleteButton_Click"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Page>

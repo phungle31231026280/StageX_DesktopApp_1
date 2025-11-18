@@ -17,6 +17,10 @@ namespace StageX_DesktopApp
 
         public DbSet<Theater> Theaters { get; set; }
         public DbSet<Seat> Seats { get; set; }
+        public DbSet<Performance> Performances { get; set; }
+        public DbSet<Booking> Bookings { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Ticket> Tickets { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             string connectionString = "Server=localhost;Database=stagex_db;User=root;Password=;";
@@ -50,6 +54,31 @@ namespace StageX_DesktopApp
                 .HasOne(s => s.SeatCategory) // 1 Ghế có 1 Hạng ghế
                 .WithMany()
                 .HasForeignKey(s => s.CategoryId);
+
+            modelBuilder.Entity<Performance>()
+                .HasOne(p => p.Show) // 1 Suất diễn thuộc 1 Vở diễn
+                .WithMany() // (Vở diễn có nhiều Suất diễn)
+                .HasForeignKey(p => p.ShowId);
+
+            modelBuilder.Entity<Performance>()
+                .HasOne(p => p.Theater) // 1 Suất diễn thuộc 1 Rạp
+                .WithMany()
+                .HasForeignKey(p => p.TheaterId);
+
+            modelBuilder.Entity<Booking>()
+                .HasMany(b => b.Payments)
+                .WithOne(p => p.Booking)
+                .HasForeignKey(p => p.BookingId);
+
+            modelBuilder.Entity<Booking>()
+                .HasMany(b => b.Tickets)
+                .WithOne(t => t.Booking)
+                .HasForeignKey(t => t.BookingId);
+
+            modelBuilder.Entity<Booking>()
+               .HasOne(b => b.Performance)
+               .WithMany()
+               .HasForeignKey(b => b.PerformanceId);
         }
     }
 }
