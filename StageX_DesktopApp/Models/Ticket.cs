@@ -23,5 +23,6 @@ namespace StageX_DesktopApp.Models
         public string Status { get; set; }
 
         public virtual Booking Booking { get; set; }
+        public virtual Seat Seat { get; set; }
     }
 }

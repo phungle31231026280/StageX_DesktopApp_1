@@ -502,3 +502,4 @@ namespace StageX_DesktopApp
         private void AddTheaterColsTextBox_LostFocus(object sender, RoutedEventArgs e) { if (string.IsNullOrWhiteSpace(((TextBox)sender).Text)) { ((TextBox)sender).Text = "Số cột"; ((TextBox)sender).Foreground = Brushes.Gray; } }
     }
 }
+

@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic; // Thêm thư viện này
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace StageX_DesktopApp.Models
 {
-    [Table("theaters")] // Ánh xạ tới bảng 'theaters'
+    [Table("theaters")]
     public class Theater
     {
         [Key]
@@ -19,7 +20,14 @@ namespace StageX_DesktopApp.Models
         [Column("status")]
         public string Status { get; set; }
 
-        // Ghi chú: Cột 'created_at' trong CSDL,
-        // chúng ta không cần dùng nó trong app Admin
+        // 1. Thêm danh sách Suất diễn (để kiểm tra điều kiện)
+        public virtual ICollection<Performance> Performances { get; set; }
+
+        // 2. Thuộc tính "ảo" (NotMapped) để điều khiển hiển thị nút
+        [NotMapped]
+        public bool CanDelete { get; set; } // True = Hiện nút Xóa
+
+        [NotMapped]
+        public bool CanEdit { get; set; }   // True = Hiện nút Sơ đồ/Sửa
     }
 }

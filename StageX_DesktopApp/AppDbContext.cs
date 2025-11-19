@@ -70,8 +70,8 @@ namespace StageX_DesktopApp
                 .HasForeignKey(p => p.ShowId);
 
             modelBuilder.Entity<Performance>()
-                .HasOne(p => p.Theater) // 1 Suất diễn thuộc 1 Rạp
-                .WithMany()
+                .HasOne(p => p.Theater)
+                .WithMany(t => t.Performances) // <-- Thêm t.Performances vào đây
                 .HasForeignKey(p => p.TheaterId);
 
             modelBuilder.Entity<Booking>()
@@ -89,12 +89,18 @@ namespace StageX_DesktopApp
                .WithMany()
                .HasForeignKey(b => b.PerformanceId);
 
+            modelBuilder.Entity<Ticket>()
+            .HasOne(t => t.Seat) 
+            .WithMany()
+            .HasForeignKey(t => t.SeatId);
+
             // Định nghĩa các thực thể không có khóa cho truy vấn báo cáo
             modelBuilder.Entity<DashboardSummary>().HasNoKey().ToView(null);
             modelBuilder.Entity<RevenueMonthly>().HasNoKey().ToView(null);
             modelBuilder.Entity<TicketSold>().HasNoKey().ToView(null);
             modelBuilder.Entity<TopShow>().HasNoKey().ToView(null);
             modelBuilder.Entity<RatingDistribution>().HasNoKey().ToView(null);
+
         }
     }
 }

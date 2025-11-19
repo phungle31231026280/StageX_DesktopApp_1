@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Net.Sockets;
 
 namespace StageX_DesktopApp.Models
 {
-    [Table("bookings")] // Ghi chú: Ánh xạ đúng tên bảng "bookings"
+    [Table("bookings")]
     public class Booking
     {
         [Key]
@@ -23,16 +22,15 @@ namespace StageX_DesktopApp.Models
         public decimal TotalAmount { get; set; }
 
         [Column("booking_status")]
-        public string Status { get; set; } // 'Đang xử lý', 'Đã hoàn thành'...
+        public string Status { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
 
-        // Quan hệ
+        // Navigation Properties
+        public virtual User User { get; set; }
+        public virtual Performance Performance { get; set; }
         public virtual ICollection<Ticket> Tickets { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
-
-        // Để lấy thông tin Performance (suất diễn)
-        public virtual Performance Performance { get; set; }
     }
 }
