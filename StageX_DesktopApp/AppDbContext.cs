@@ -101,6 +101,12 @@ namespace StageX_DesktopApp
             modelBuilder.Entity<TopShow>().HasNoKey().ToView(null);
             modelBuilder.Entity<RatingDistribution>().HasNoKey().ToView(null);
 
+            // Thực thể cho trang bán vé (không có khóa chính)
+            modelBuilder.Entity<ShowInfo>().HasNoKey().ToView(null);
+            modelBuilder.Entity<PerformanceInfo>().HasNoKey().ToView(null);
+            modelBuilder.Entity<AvailableSeat>().HasNoKey().ToView(null);
+            modelBuilder.Entity<CreateBookingResult>().HasNoKey().ToView(null);
+
         }
     }
 }
