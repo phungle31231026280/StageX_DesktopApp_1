@@ -36,6 +36,13 @@ namespace StageX_DesktopApp
             optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         }
 
+        // Dữ liệu trang bán vé
+        public DbSet<ShowInfo> ShowInfos { get; set; }
+        public DbSet<PerformanceInfo> PerformanceInfos { get; set; }
+        public DbSet<AvailableSeat> AvailableSeats { get; set; }
+        // Kết quả trả về khi tạo booking qua stored procedure
+        public DbSet<CreateBookingResult> CreateBookingResults { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Mối quan hệ 1-1 (User/UserDetail)
