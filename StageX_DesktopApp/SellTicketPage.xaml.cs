@@ -1,13 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using RestSharp;
 using StageX_DesktopApp.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace StageX_DesktopApp
 {
@@ -24,6 +30,7 @@ namespace StageX_DesktopApp
         private List<AvailableSeat> seatList = new();
         // Danh sách ghế đã chọn để tính tiền
         private ObservableCollection<BillSeat> billSeats = new();
+        private string selectedPaymentMethod = "Tiền mặt";
 
         public SellTicketPage()
         {
@@ -37,7 +44,6 @@ namespace StageX_DesktopApp
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadShowsAsync();
-            UpdatePaymentVisibility();
         }
 
         /// <summary>
@@ -112,11 +118,11 @@ namespace StageX_DesktopApp
             }
 
             // Bản đồ màu cho từng hạng ghế (A, B, C). Sử dụng màu sáng để dễ phân biệt.
-            var categoryColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
+            var categoryColors = new Dictionary<string, System.Windows.Media.Color>(StringComparer.OrdinalIgnoreCase)
             {
-                { "A", Color.FromRgb(33, 150, 243) },   // Màu xanh dương
-                { "B", Color.FromRgb(76, 175, 80) },    // Màu xanh lá
-                { "C", Color.FromRgb(103, 58, 183) }    // Màu tím
+                { "A", System.Windows.Media.Color.FromRgb(33, 150, 243) },   // Màu xanh dương
+                { "B", System.Windows.Media.Color.FromRgb(76, 175, 80) },    // Màu xanh lá
+                { "C", System.Windows.Media.Color.FromRgb(103, 58, 183) }    // Màu tím
             };
 
             foreach (var seat in seatList)
@@ -134,7 +140,7 @@ namespace StageX_DesktopApp
                     Background = new SolidColorBrush(
                         categoryColors.TryGetValue(seat.category_name?.Trim() ?? string.Empty, out var col)
                             ? col
-                            : Color.FromRgb(30, 40, 60)),
+                            : System.Windows.Media.Color.FromRgb(30, 40, 60)),
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(1),
                     BorderBrush = Brushes.Transparent
@@ -171,7 +177,7 @@ namespace StageX_DesktopApp
                     Price = seat.base_price
                 });
                 // Chọn: tô viền nổi bật (giữ nguyên màu nền)
-                btn.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7));
+                btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7));
                 btn.BorderThickness = new Thickness(2);
             }
             UpdateTotal();
@@ -184,7 +190,8 @@ namespace StageX_DesktopApp
         {
             decimal total = billSeats.Sum(x => x.Price);
             TotalTextBlock.Text = $"Thành tiền: {total:N0}đ";
-            if (CashPanel.Visibility == Visibility.Visible && decimal.TryParse(CustomerCashTextBox.Text, out decimal given))
+
+            if (selectedPaymentMethod == "Tiền mặt" && decimal.TryParse(CustomerCashTextBox.Text, out decimal given))
             {
                 decimal change = given - total;
                 ChangeTextBlock.Text = change >= 0 ? $"{change:N0}đ" : $"-{Math.Abs(change):N0}đ";
@@ -193,33 +200,85 @@ namespace StageX_DesktopApp
             {
                 ChangeTextBlock.Text = "0đ";
             }
-        }
 
-        /// <summary>
-        /// Xử lý khi thay đổi phương thức thanh toán.
-        /// </summary>
-        private void PaymentRadioButton_Checked(object sender, RoutedEventArgs e)
-        {
-            UpdatePaymentVisibility();
-        }
-
-        /// <summary>
-        /// Hiển thị panel tiền mặt nếu chọn Tiền mặt, ẩn khi chọn Chuyển khoản.
-        /// </summary>
-        private void UpdatePaymentVisibility()
-        {
-            if (CashPanel == null) return;
-            if (CashRadioButton.IsChecked == true)
+            // Nếu chọn Chuyển khoản và có tổng tiền > 0, tạo QR
+            if (selectedPaymentMethod == "Chuyển khoản" && total > 0)
             {
-                CashPanel.Visibility = Visibility.Visible;
+                GenerateQrCode((int)total);
+            }
+        }
+        private void GenerateQrCode(int amount)
+        {
+            // Hardcode thông tin tài khoản nhận tiền của bạn (thay đổi giá trị này)
+            string accountNo = "1010101010"; // Ví dụ: "123456789"
+            string accountName = "NGUYEN VAN A"; // Ví dụ: "NGUYEN VAN A"
+            int acqId = 970436; // Vietcombank/...
+            string addInfo = "Thanh toan ve kich"; // Nội dung chuyển khoản (có thể thay đổi)
+
+            var apiRequest = new APIRequest
+            {
+                acqId = acqId,
+                accountNo = accountNo,
+                accountName = accountName,
+                amount = amount,
+                addInfo = addInfo,
+                template = "compact2"
+            };
+
+            var jsonRequest = JsonConvert.SerializeObject(apiRequest);
+
+            var client = new RestClient("https://api.vietqr.io/v2/generate");
+            var request = new RestRequest("", RestSharp.Method.Post);
+            request.AddHeader("Accept", "application/json");
+            request.AddParameter("application/json", jsonRequest, ParameterType.RequestBody);
+
+            RestResponse response = client.Execute(request);
+            if (response.IsSuccessful)
+            {
+                var dataResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
+                string base64 = dataResult.data.qrDataURL.Replace("data:image/png;base64,", "");
+                byte[] imageBytes = Convert.FromBase64String(base64);
+                using (var ms = new MemoryStream(imageBytes))
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.StreamSource = ms;
+                    bitmap.EndInit();
+                    QrImage.Source = bitmap;
+                }
             }
             else
             {
-                CashPanel.Visibility = Visibility.Collapsed;
-                ChangeTextBlock.Text = "0đ";
+                MessageBox.Show("Lỗi khi tạo QR: " + response.ErrorMessage);
             }
         }
 
+        private void PaymentButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn) return;
+
+            // Reset màu tất cả buttons
+            CashButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 18, 32)); // Màu tối mặc định
+            BankButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 18, 32));
+
+            // Nổi bật button được click
+            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7)); // Màu vàng nổi bật
+
+            selectedPaymentMethod = btn.Content.ToString();
+
+            if (selectedPaymentMethod == "Tiền mặt")
+            {
+                CashPanel.Visibility = Visibility.Visible;
+                QrPanel.Visibility = Visibility.Collapsed;
+            }
+            else // Chuyển khoản
+            {
+                CashPanel.Visibility = Visibility.Collapsed;
+                QrPanel.Visibility = Visibility.Visible;
+                UpdateTotal(); // Gọi để tạo QR ngay
+            }
+        }
         /// <summary>
         /// Khi thay đổi số tiền khách đưa: cập nhật tiền thừa.
         /// </summary>
@@ -249,7 +308,7 @@ namespace StageX_DesktopApp
                 return;
             }
             decimal total = billSeats.Sum(x => x.Price);
-            string paymentMethod = CashRadioButton.IsChecked == true ? "Tiền mặt" : "Chuyển khoản";
+            string paymentMethod = selectedPaymentMethod;
             if (paymentMethod == "Tiền mặt")
             {
                 if (!decimal.TryParse(CustomerCashTextBox.Text, out decimal given) || given < total)
@@ -296,6 +355,31 @@ namespace StageX_DesktopApp
             public int seat_id { get; set; }
             public string SeatLabel { get; set; } = string.Empty;
             public decimal Price { get; set; }
+        }
+        public class APIRequest
+        {
+            public string accountNo { get; set; }
+            public string accountName { get; set; }
+            public int acqId { get; set; }
+            public int amount { get; set; }
+            public string addInfo { get; set; }
+            public string format { get; set; }
+            public string template { get; set; }
+        }
+
+        public class Data
+        {
+            public int acpId { get; set; }
+            public string accountName { get; set; }
+            public string qrCode { get; set; }
+            public string qrDataURL { get; set; }
+        }
+
+        public class ApiResponse
+        {
+            public string code { get; set; }
+            public string desc { get; set; }
+            public Data data { get; set; }
         }
     }
 }
