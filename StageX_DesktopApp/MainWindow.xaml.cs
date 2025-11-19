@@ -109,7 +109,6 @@ namespace StageX_DesktopApp
             //(Vô hiệu hóa 2 dòng này cho đến khi tạo Page)
             NavGenreMgmt.Click += (s, e) => MainContentFrame.Navigate(_genreManagementPage);
             NavShowMgmt.Click += (s, e) => MainContentFrame.Navigate(_showManagementPage);
-            NavAccountMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang Quản lý Tài khoản...");
             NavTheaterMgmt.Click += (s, e) => MainContentFrame.Navigate(_theaterSeatPage);
             NavPerformanceMgmt.Click += (s, e) => MainContentFrame.Navigate(_performancePage);
             NavAccountMgmt.Click += (s, e) => MainContentFrame.Navigate(_accountPage);
