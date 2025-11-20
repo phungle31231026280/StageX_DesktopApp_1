@@ -165,6 +165,7 @@
             </Grid>
 
             <Border Grid.Row="4" Style="{StaticResource CardStyle}" Margin="5" Height="200">
+                
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -175,6 +176,15 @@
                               CanUserAddRows="False" HeadersVisibility="Column" 
                               Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
                               GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="Black"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Padding" Value="10,8"/>
+                                <Setter Property="FontSize" Value="14"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGrid.Resources>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="STT" Binding="{Binding Index}" Width="50"/>
                             <DataGridTextColumn Header="Tên vở diễn" Binding="{Binding show_name}" Width="*"/>

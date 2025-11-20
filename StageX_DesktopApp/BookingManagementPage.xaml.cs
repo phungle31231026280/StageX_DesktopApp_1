@@ -1,17 +1,18 @@
-﻿using PdfSharp.Drawing;
+﻿using Microsoft.EntityFrameworkCore;
+using PdfSharp.Drawing;
+using PdfSharp.Drawing.Layout;
+// Thư viện PDF
+using PdfSharp.Pdf;
 using StageX_DesktopApp.Models;
+using StageX_DesktopApp.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.EntityFrameworkCore;
-using System.IO;
-using System.Diagnostics;
-
-// Thư viện PDF
-using PdfSharp.Pdf;
 
 
 namespace StageX_DesktopApp
@@ -144,68 +145,126 @@ namespace StageX_DesktopApp
                 PdfDocument document = new PdfDocument();
                 document.Info.Title = $"Vé_{b.BookingId}";
 
-                // Tạo trang khổ A6 (nhỏ gọn như vé) hoặc A5
+                // Khổ A6
                 PdfPage page = document.AddPage();
-                page.Width = XUnit.FromMillimeter(105); // A6 Width
-                page.Height = XUnit.FromMillimeter(148); // A6 Height
+                page.Width = XUnit.FromMillimeter(105);
+                page.Height = XUnit.FromMillimeter(148);
                 XGraphics gfx = XGraphics.FromPdfPage(page);
 
-                // Font
-                XFont fontTitle = new XFont("Arial", 16);
+                // --- CẤU HÌNH MÀU SẮC & FONT ---
+                XBrush bgBrush = new XSolidBrush(XColor.FromArgb(26, 26, 26)); // Màu #1A1A1A (Nền App)
+                XBrush textWhite = XBrushes.White;
+                XBrush textGold = new XSolidBrush(XColor.FromArgb(255, 193, 7)); // Màu #FFC107 (Vàng App)
+                XBrush textGray = XBrushes.LightGray;
+                XPen linePen = new XPen(XColor.FromArgb(60, 60, 60), 1); // Đường kẻ xám tối
+
+                // Font (Đơn giản hóa để tránh lỗi)
+                XFont fontTitle = new XFont("Arial", 18);
                 XFont fontHeader = new XFont("Arial", 12);
-                XFont fontNormal = new XFont("Arial", 10); 
-                XFont fontItalic = new XFont("Arial", 9);
+                XFont fontNormal = new XFont("Arial", 10);
+                XFont fontSmall = new XFont("Arial", 8);
 
-                // 2. Vẽ nội dung
-                double y = 20;
+                // --- VẼ GIAO DIỆN VÉ ---
+
                 double margin = 10;
-                double width = page.Width - 2 * margin;
+                double y = 20;
+                double pageWidth = page.Width;
+                double contentWidth = pageWidth - 2 * margin;
 
-                // Logo / Tên rạp
-                gfx.DrawString("STAGEX THEATER", fontTitle, XBrushes.DarkRed, new XRect(0, y, page.Width, 20), XStringFormats.TopCenter);
+                // 1. Vẽ Nền Đen toàn bộ vé
+                gfx.DrawRectangle(bgBrush, 0, 0, page.Width, page.Height);
+
+                // 2. Vẽ Khung Viền Vàng
+                XPen borderPen = new XPen(XColor.FromArgb(255, 193, 7), 2);
+                gfx.DrawRectangle(borderPen, margin, margin, contentWidth, page.Height - 2 * margin);
+
+                // 3. Logo
+                try
+                {
+                    string logoPath = "E:\\PTUDDesktop\\Đồ án\\StageX_DesktopApp\\StageX_DesktopApp\\logo.png";
+                    if (File.Exists(logoPath))
+                    {
+                        XImage logo = XImage.FromFile(logoPath);
+                        gfx.DrawImage(logo, (pageWidth - 60) / 2, y, 40, 40);
+                        y += 50;
+                    }
+                    else { y += 10; }
+                }
+                catch { y += 10; }
+
+                // 4. Tiêu đề
+                gfx.DrawString("STAGEX THEATER", fontTitle, textGold, new XRect(0, y, pageWidth, 20), XStringFormats.TopCenter);
                 y += 25;
-                gfx.DrawString("Vé Xem Kịch", fontHeader, XBrushes.Black, new XRect(0, y, page.Width, 15), XStringFormats.TopCenter);
-                y += 20;
+                gfx.DrawString("VÉ XEM KỊCH", fontHeader, textWhite, new XRect(0, y, pageWidth, 15), XStringFormats.TopCenter);
+                y += 25;
 
                 // Kẻ đường
-                gfx.DrawLine(XPens.Black, margin, y, page.Width - margin, y);
+                gfx.DrawLine(linePen, margin + 5, y, pageWidth - margin - 5, y);
                 y += 15;
 
-                // Thông tin chính
-                gfx.DrawString($"Mã đơn: #{b.BookingId}", fontNormal, XBrushes.Black, margin, y);
-                y += 15;
-                gfx.DrawString($"Khách hàng: {b.CustomerName}", fontNormal, XBrushes.Black, margin, y);
-                y += 20;
+                // 5. Thông tin Vé
+                double leftX = margin + 10;
 
-                // Thông tin vở diễn (In đậm)
-                gfx.DrawString("Vở diễn:", fontHeader, XBrushes.Black, margin, y);
-                y += 15;
-                // Tự động xuống dòng nếu tên vở quá dài (Logic đơn giản: cắt chuỗi)
-                gfx.DrawString(b.ShowTitle, fontTitle, XBrushes.Black, new XRect(margin, y, width, 40), XStringFormats.TopLeft);
+                void DrawRow(string label, string value, XBrush valBrush)
+                {
+                    gfx.DrawString(label, fontNormal, textGray, leftX, y);
+                    // Vẽ giá trị căn phải hoặc thụt vào
+                    if (value.Length > 25) // Nếu dài quá thì xuống dòng
+                    {
+                        y += 15;
+                        gfx.DrawString(value, fontNormal, valBrush, leftX, y);
+                    }
+                    else
+                    {
+                        // Vẽ giá trị cùng dòng nhưng lệch sang phải
+                        gfx.DrawString(value, fontNormal, valBrush, leftX + 70, y);
+                    }
+                    y += 20;
+                }
+
+                DrawRow("Mã đơn:", $"#{b.BookingId}", textWhite);
+                DrawRow("Khách:", b.CustomerName, textWhite);
+                y += 5;
+
+                // Tên Vở diễn (To và Vàng)
+                gfx.DrawString("Vở diễn:", fontHeader, textGray, leftX, y);
+                y += 18;
+                // Vẽ text có xuống dòng (dùng XTextFormatter nếu có, hoặc DrawString đơn giản)
+                // Ở đây dùng DrawString đơn giản
+                gfx.DrawString(b.ShowTitle, fontTitle, textGold, new XRect(leftX, y, contentWidth - 20, 40), XStringFormats.TopLeft);
+                y += 35;
+
+                DrawRow("Rạp:", b.TheaterName, textWhite);
+                DrawRow("Suất:", b.PerformanceTime.ToString("HH:mm - dd/MM/yyyy"), textWhite);
+
+                y += 5;
+                // Ghế ngồi (Nổi bật)
+                gfx.DrawString("Ghế:", fontHeader, textGray, leftX, y);
+                gfx.DrawString(b.SeatList, fontTitle, textGold, leftX + 50, y);
                 y += 30;
 
-                gfx.DrawString($"Rạp: {b.TheaterName}", fontNormal, XBrushes.Black, margin, y);
-                y += 15;
-                gfx.DrawString($"Thời gian: {b.PerformanceTime:dd/MM/yyyy HH:mm}", fontNormal, XBrushes.Black, margin, y);
-                y += 25;
-
-                // Ghế và Giá
-                gfx.DrawString("Ghế ngồi:", fontHeader, XBrushes.Black, margin, y);
-                gfx.DrawString(b.SeatList, fontTitle, XBrushes.DarkBlue, margin + 70, y);
-                y += 25;
-
-                gfx.DrawString("Tổng tiền:", fontHeader, XBrushes.Black, margin, y);
-                gfx.DrawString($"{b.TotalAmount:N0} VNĐ", fontTitle, XBrushes.Red, margin + 70, y);
-                y += 30;
-
-                // Footer
-                gfx.DrawLine(XPens.Black, margin, y, page.Width - margin, y);
+                // Tổng tiền
+                gfx.DrawLine(linePen, leftX, y, pageWidth - leftX, y);
                 y += 10;
-                gfx.DrawString("Cảm ơn quý khách đã ủng hộ StageX!", fontItalic, XBrushes.Gray, new XRect(0, y, page.Width, 10), XStringFormats.TopCenter);
-                y += 12;
-                gfx.DrawString("Vui lòng đến trước giờ diễn 15 phút.", fontItalic, XBrushes.Gray, new XRect(0, y, page.Width, 10), XStringFormats.TopCenter);
+                gfx.DrawString("TỔNG CỘNG:", fontHeader, textWhite, leftX, y + 5);
+                gfx.DrawString($"{b.TotalAmount:N0} đ", fontTitle, textGold, pageWidth - leftX - 100, y + 5);
+                y += 40;
 
-                // 3. Lưu và Mở
+                // 6. Mã vạch Giả lập (Màu trắng trên nền đen)
+                Random rnd = new Random();
+                double barcodeX = (pageWidth - 100) / 2;
+                for (int i = 0; i < 50; i++)
+                {
+                    double w = rnd.Next(1, 4);
+                    gfx.DrawRectangle(XBrushes.White, barcodeX, y, w, 20);
+                    barcodeX += w + rnd.Next(1, 3);
+                }
+                y += 30;
+
+                // 7. Footer
+                gfx.DrawString("Cảm ơn quý khách!", fontSmall, textGray, new XRect(0, y, pageWidth, 10), XStringFormats.TopCenter);
+
+                // --- LƯU VÀ MỞ ---
                 string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "StageX_Tickets");
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
@@ -213,9 +272,10 @@ namespace StageX_DesktopApp
                 string fullPath = Path.Combine(folder, fileName);
 
                 document.Save(fullPath);
-
-                // Tự động mở file PDF
                 Process.Start(new ProcessStartInfo(fullPath) { UseShellExecute = true });
+
+                // GHI CHÚ: PHÁT TIẾNG THÀNH CÔNG
+
             }
             catch (Exception ex)
             {

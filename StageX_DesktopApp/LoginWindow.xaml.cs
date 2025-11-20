@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StageX_DesktopApp.Models;
+using StageX_DesktopApp.Services;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -43,7 +44,9 @@ namespace StageX_DesktopApp
                     bool isPasswordCorrect = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
                     if (!isPasswordCorrect)
                     {
-                        // GHI CHÚ: ĐÂY LÀ TIN NHẮN LỖI "NHẬP SAI"
+                        // GHI CHÚ: PHÁT TIẾNG LỖI
+                        SoundManager.PlayError();
+
                         ErrorTextBlock.Text = "Mật khẩu không đúng.";
                         LoginButton.IsEnabled = true;
                         return;
