@@ -15,6 +15,7 @@ namespace StageX_DesktopApp
         private AccountPage _accountPage;
         private BookingManagementPage _bookingPage; // <-- GHI CHÚ: Trang mới
         private ProfilePage _profilePage;
+        private SellTicketPage _sellTicketPage;
 
         public MainWindow()
         {
@@ -29,6 +30,7 @@ namespace StageX_DesktopApp
             _accountPage = new AccountPage();
             _bookingPage = new BookingManagementPage(); // <-- GHI CHÚ: Khởi tạo trang mới
             _profilePage = new ProfilePage();
+            _sellTicketPage = new SellTicketPage();
 
             LoadUserInfo();
             AttachClickEvents();
@@ -98,7 +100,7 @@ namespace StageX_DesktopApp
             NavAdminBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
 
             // === Nhóm Nhân viên ===
-            NavSellTicket.Click += (s, e) => MessageBox.Show("Sẽ mở trang Bán vé...");
+            NavSellTicket.Click += (s, e) => MainContentFrame.Navigate(_sellTicketPage);
             NavStaffBookingMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang QL Đơn hàng (Nhân viên)...");
 
             // === Nhóm Chung ===

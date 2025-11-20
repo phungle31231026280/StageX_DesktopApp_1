@@ -36,6 +36,13 @@ namespace StageX_DesktopApp
             optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         }
 
+        // Dữ liệu trang bán vé
+        public DbSet<ShowInfo> ShowInfos { get; set; }
+        public DbSet<PerformanceInfo> PerformanceInfos { get; set; }
+        public DbSet<AvailableSeat> AvailableSeats { get; set; }
+        // Kết quả trả về khi tạo booking qua stored procedure
+        public DbSet<CreateBookingResult> CreateBookingResults { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Mối quan hệ 1-1 (User/UserDetail)
@@ -100,6 +107,12 @@ namespace StageX_DesktopApp
             modelBuilder.Entity<TicketSold>().HasNoKey().ToView(null);
             modelBuilder.Entity<TopShow>().HasNoKey().ToView(null);
             modelBuilder.Entity<RatingDistribution>().HasNoKey().ToView(null);
+
+            // Thực thể cho trang bán vé (không có khóa chính)
+            modelBuilder.Entity<ShowInfo>().HasNoKey().ToView(null);
+            modelBuilder.Entity<PerformanceInfo>().HasNoKey().ToView(null);
+            modelBuilder.Entity<AvailableSeat>().HasNoKey().ToView(null);
+            modelBuilder.Entity<CreateBookingResult>().HasNoKey().ToView(null);
 
         }
     }
