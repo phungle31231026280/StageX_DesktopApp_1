@@ -90,8 +90,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_booking_pos` (IN `in_us
       Sau khi thủ tục proc_create_booking được gọi, bảng bookings sẽ tạo dòng mới với booking_status là 'Đang chờ'.
       Sau đó chúng ta cập nhật booking_status thành 'Đã thanh toán POS' để biểu thị đã thanh toán tại quầy.
     */
+    -- Gọi proc_create_booking để tạo đơn hàng với booking_status = 'Đang xử lý'
     CALL proc_create_booking(in_user_id, in_performance_id, in_total_amount);
-    UPDATE bookings SET booking_status = 'Đã thanh toán POS' WHERE booking_id = LAST_INSERT_ID();
+    -- Sau khi tạo đơn hàng tại quầy, cập nhật trạng thái thành 'Đã hoàn thành'
+    UPDATE bookings 
+    SET booking_status = 'Đã hoàn thành'
+    WHERE booking_id = LAST_INSERT_ID();
     -- Trả về id booking vừa tạo
     SELECT LAST_INSERT_ID() AS booking_id;
 END$$
@@ -123,6 +127,112 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_review` (IN `in_show_id
     INSERT INTO reviews (show_id, user_id, rating, content, created_at)
     VALUES (in_show_id, in_user_id, in_rating, in_content, NOW());
     SELECT LAST_INSERT_ID() AS review_id;
+END$$
+
+--
+-- =============================================================
+--  Các thủ tục hỗ trợ trang Bán vé (Nhân viên)
+--  Lưu ý: Những thủ tục này phục vụ cho việc hiển thị danh sách
+--  vở diễn, suất chiếu và sơ đồ ghế trong ứng dụng desktop.
+--  Nếu đã tồn tại thủ tục cùng tên, hãy cập nhật thay vì tạo mới.
+-- =============================================================
+
+-- Lấy danh sách vở diễn đang mở bán
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_active_shows`()  
+BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+
+    -- Trả về các vở diễn đang chiếu (chỉ những vở có ít nhất một suất đang mở bán hoặc đang diễn)
+    SELECT show_id, title
+    FROM shows
+    WHERE status = 'Đang chiếu';
+END$$
+
+-- Lấy danh sách suất chiếu theo vở diễn.
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_performances_by_show` (IN `in_show_id` INT)  
+BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+
+    -- Trả về các suất chiếu thuộc vở diễn đang mở bán
+    SELECT performance_id,
+           performance_date,
+           start_time,
+           end_time,
+           price
+    FROM performances
+    WHERE show_id = in_show_id
+      AND status = 'Đang mở bán';
+END$$
+
+-- Lấy danh sách ghế còn trống cho một suất chiếu.
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_available_seats` (IN `in_performance_id` INT)  
+BEGIN
+    SELECT s.seat_id,
+           s.row_char,
+           s.seat_number,
+           IFNULL(sc.category_name, '') AS category_name,
+           IFNULL(sc.base_price, 0)      AS base_price
+    FROM seats s
+    JOIN seat_performance sp ON sp.seat_id = s.seat_id
+    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
+    WHERE sp.performance_id = in_performance_id
+      AND sp.status = 'trống';
+END$$
+
+-- ===================================================================
+--  Thủ tục cập nhật trạng thái suất diễn và vở diễn
+--  Gọi thủ tục này trước khi truy vấn danh sách vở diễn/suất diễn để
+--  đảm bảo trạng thái được cập nhật đúng theo ngày giờ hiện tại.
+--
+--  Quy tắc cập nhật:
+--    * Suất diễn có thời gian kết thúc (performance_date + end_time) < NOW()  => 'Đã kết thúc'
+--    * Suất diễn đang diễn ra (đã bắt đầu nhưng chưa kết thúc)           => 'Đang diễn'
+--    * Còn lại                                                         => 'Đang mở bán'
+--    * Vở diễn có ít nhất một suất đang mở bán/đang diễn               => 'Đang chiếu'
+--      Ngược lại nếu tất cả suất đã kết thúc                           => 'Đã kết thúc'
+--      (trường hợp khác giữ nguyên, ví dụ 'Sắp chiếu')
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_statuses`()  
+BEGIN
+    -- Cập nhật trạng thái cho bảng performances
+    UPDATE performances
+    SET status =
+        CASE
+            -- Nếu thời gian kết thúc < thời gian hiện tại thì đã kết thúc
+            WHEN (
+                CONCAT(performance_date, ' ', COALESCE(end_time, start_time)) < NOW()
+            ) THEN 'Đã kết thúc'
+            -- Nếu đã bắt đầu nhưng chưa kết thúc => đang diễn
+            WHEN (
+                CONCAT(performance_date, ' ', start_time) <= NOW() AND
+                (
+                    end_time IS NULL OR CONCAT(performance_date, ' ', end_time) >= NOW()
+                )
+            ) THEN 'Đang diễn'
+            -- Còn lại là đang mở bán
+            ELSE 'Đang mở bán'
+        END;
+
+    -- Cập nhật trạng thái cho bảng shows
+    UPDATE shows s
+    SET s.status = (
+        CASE
+            -- Nếu có ít nhất một suất đang mở bán hoặc đang diễn => Đang chiếu
+            WHEN EXISTS (
+                SELECT 1 FROM performances p
+                WHERE p.show_id = s.show_id
+                  AND p.status IN ('Đang mở bán', 'Đang diễn')
+            ) THEN 'Đang chiếu'
+            -- Nếu tất cả các suất đều đã kết thúc => Đã kết thúc
+            WHEN NOT EXISTS (
+                SELECT 1 FROM performances p
+                WHERE p.show_id = s.show_id AND p.status <> 'Đã kết thúc'
+            ) THEN 'Đã kết thúc'
+            ELSE s.status
+        END
+    );
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_seat_category` (IN `in_name` VARCHAR(100), IN `in_base_price` DECIMAL(10,3), IN `in_color_class` VARCHAR(50))   BEGIN
@@ -847,6 +957,7 @@ BEGIN
         GROUP BY rating
     ) r ON s.star = r.rating;
 END$$
+
 
 DELIMITER ;
 
