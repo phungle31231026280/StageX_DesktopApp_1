@@ -28,8 +28,9 @@
                 <Button x:Name="NavPerformanceMgmt" Content="Quản lý Suất diễn" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavAccountMgmt" Content="Quản lý Tài khoản" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavStaffBookingMgmt" Content="Quản lý Đơn hàng &amp; In vé" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
-                <Button x:Name="NavActorMgmt" Content="Quản lý Diễn viên" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
+
                 <Button x:Name="NavSellTicket" Content="Bán vé" Margin="10,5" Padding="15,10" FontWeight="SemiBold" />
+                <Button x:Name="NavStaffBookingMgmt" Content="Quản lý Đơn hàng &amp; In vé" Padding="15,10" FontWeight="SemiBold" Width="222"/>
 
                 <Button x:Name="NavProfile" Content="Quản lý Hồ sơ cá nhân" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavLogout" Content="Đăng xuất" Margin="10,30,10,10" Padding="15,10" FontWeight="SemiBold" Background="#FFDC3545"/>

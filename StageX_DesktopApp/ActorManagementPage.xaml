@@ -89,6 +89,15 @@
                 <DataGrid Grid.Row="1" x:Name="ActorsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                           Background="Transparent" RowBackground="#FF1E1E1E" Foreground="White" HeadersVisibility="Column"
                           GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Black"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding ActorId}" Width="50"/>
 

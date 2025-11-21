@@ -143,7 +143,8 @@ namespace StageX_DesktopApp
                             : System.Windows.Media.Color.FromRgb(30, 40, 60)),
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(1),
-                    BorderBrush = Brushes.Transparent
+                    BorderBrush = Brushes.Transparent,
+                    ToolTip = $"{seat.category_name}(+{seat.base_price:N0}đ)"
                 };
                 btn.Click += SeatButton_Click;
                 Grid.SetRow(btn, rowIndex);
@@ -174,7 +175,7 @@ namespace StageX_DesktopApp
                 {
                     seat_id = seat.seat_id,
                     SeatLabel = seat.SeatLabel,
-                    Price = seat.base_price
+                    Price = seat.base_price + selectedPerformance.price
                 });
                 // Chọn: tô viền nổi bật (giữ nguyên màu nền)
                 btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7));
