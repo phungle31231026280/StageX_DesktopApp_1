@@ -63,7 +63,7 @@ namespace StageX_DesktopApp
             NavTheaterMgmt.Visibility = Visibility.Collapsed;
             NavPerformanceMgmt.Visibility = Visibility.Collapsed;
             NavAccountMgmt.Visibility = Visibility.Collapsed;
-            NavAdminBookingMgmt.Visibility = Visibility.Collapsed;
+            //NavAdminBookingMgmt.Visibility = Visibility.Collapsed;
 
             NavSellTicket.Visibility = Visibility.Collapsed;
             NavStaffBookingMgmt.Visibility = Visibility.Collapsed;
@@ -77,7 +77,7 @@ namespace StageX_DesktopApp
                 NavTheaterMgmt.Visibility = Visibility.Visible;
                 NavPerformanceMgmt.Visibility = Visibility.Visible;
                 NavAccountMgmt.Visibility = Visibility.Visible;
-                NavAdminBookingMgmt.Visibility = Visibility.Visible; // Nút quản lý đơn hàng
+                //NavAdminBookingMgmt.Visibility = Visibility.Visible; // Nút quản lý đơn hàng
             }
             else if (user.Role == "Nhân viên")
             {
@@ -97,11 +97,11 @@ namespace StageX_DesktopApp
             NavAccountMgmt.Click += (s, e) => MainContentFrame.Navigate(_accountPage);
 
             // GHI CHÚ: KẾT NỐI TRANG QUẢN LÝ ĐƠN HÀNG
-            NavAdminBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
+            //NavAdminBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
 
             // === Nhóm Nhân viên ===
             NavSellTicket.Click += (s, e) => MainContentFrame.Navigate(_sellTicketPage);
-            NavStaffBookingMgmt.Click += (s, e) => MessageBox.Show("Sẽ mở trang QL Đơn hàng (Nhân viên)...");
+            NavStaffBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
 
             // === Nhóm Chung ===
             NavProfile.Click += (s, e) => MainContentFrame.Navigate(_profilePage);
