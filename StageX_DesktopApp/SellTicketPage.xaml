@@ -61,8 +61,8 @@
             <StackPanel>
                 <TextBlock Text="4. Thanh toán" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" />
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <Button x:Name="CashButton" Content="Tiền mặt" Padding="10,5" Margin="0,0,10,0" Click="PaymentButton_Click" Background="#FF0C1220" Foreground="#FFFFC107" BorderBrush="#FFFFC107" />
-                    <Button x:Name="BankButton" Content="Chuyển khoản" Padding="10,5" Click="PaymentButton_Click" Background="#FF0C1220" Foreground="#FFFFC107" BorderBrush="#FFFFC107" />
+                    <Button x:Name="CashButton" Content="Tiền mặt" Padding="10,5" Margin="0,0,10,0" Click="PaymentButton_Click" Background="#FF0C1220" Foreground="#FFFFC107" BorderBrush="#FFFFC107" Width="127" />
+                    <Button x:Name="BankButton" Content="Chuyển khoản" Padding="10,5" Click="PaymentButton_Click" Background="#FF0C1220" Foreground="#FFFFC107" BorderBrush="#FFFFC107" Width="128" />
                 </StackPanel>
                 <StackPanel x:Name="CashPanel" Orientation="Horizontal" Margin="0,5,0,0" Visibility="Visible">
                     <TextBlock Text="Khách đưa:" VerticalAlignment="Center" Margin="0,0,5,0" />

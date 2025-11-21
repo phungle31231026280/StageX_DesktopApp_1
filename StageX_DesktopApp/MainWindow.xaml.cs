@@ -96,9 +96,6 @@ namespace StageX_DesktopApp
             NavPerformanceMgmt.Click += (s, e) => MainContentFrame.Navigate(_performancePage);
             NavAccountMgmt.Click += (s, e) => MainContentFrame.Navigate(_accountPage);
 
-            // GHI CHÚ: KẾT NỐI TRANG QUẢN LÝ ĐƠN HÀNG
-            //NavAdminBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
-
             // === Nhóm Nhân viên ===
             NavSellTicket.Click += (s, e) => MainContentFrame.Navigate(_sellTicketPage);
             NavStaffBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);
