@@ -85,13 +85,26 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       LoadingRow="CategoriesGrid_LoadingRow"
-                      HeadersVisibility="Column, Row">
+                      HeadersVisibility="Column, Row"
+                       Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+    RowHeaderWidth="0">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Black"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </Style>
+                </DataGrid.Resources>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" Binding="{Binding CategoryId}" Width="50" Visibility="Collapsed"/>
                     <DataGridTextColumn Header="Tên Hạng Ghế" Binding="{Binding CategoryName}" Width="*"/>
                     <DataGridTextColumn Header="Giá Phụ Thu (VNĐ)" Binding="{Binding BasePrice, StringFormat='N0'}" Width="*"/>
 
                     <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                       
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">

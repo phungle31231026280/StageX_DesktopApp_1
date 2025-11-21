@@ -16,7 +16,7 @@ namespace StageX_DesktopApp.Models
         public string Email { get; set; }
 
         [Column("account_name")]
-        public string AccountName { get; set; }
+        public string? AccountName { get; set; }
 
         [Column("password")]
         public string PasswordHash { get; set; }
@@ -26,11 +26,11 @@ namespace StageX_DesktopApp.Models
         public string Role { get; set; }
 
         [Column("status")]
-        public string Status { get; set; }
+        public string? Status { get; set; }
 
         // GHI CHÚ: Thêm thuộc tính này để sửa lỗi 'IsVerified'
         [Column("is_verified")]
-        public bool IsVerified { get; set; }
+        public bool? IsVerified { get; set; }
 
         // Mối quan hệ 1-1 (cho trang Hồ sơ)
         public virtual UserDetail UserDetail { get; set; }

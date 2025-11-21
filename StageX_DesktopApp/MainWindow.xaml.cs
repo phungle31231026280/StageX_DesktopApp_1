@@ -16,6 +16,7 @@ namespace StageX_DesktopApp
         private BookingManagementPage _bookingPage; // <-- GHI CHÚ: Trang mới
         private ProfilePage _profilePage;
         private SellTicketPage _sellTicketPage;
+        private ActorManagementPage _actorPage;
 
         public MainWindow()
         {
@@ -31,6 +32,7 @@ namespace StageX_DesktopApp
             _bookingPage = new BookingManagementPage(); // <-- GHI CHÚ: Khởi tạo trang mới
             _profilePage = new ProfilePage();
             _sellTicketPage = new SellTicketPage();
+            _actorPage = new ActorManagementPage();
 
             LoadUserInfo();
             AttachClickEvents();
@@ -64,7 +66,7 @@ namespace StageX_DesktopApp
             NavPerformanceMgmt.Visibility = Visibility.Collapsed;
             NavAccountMgmt.Visibility = Visibility.Collapsed;
             //NavAdminBookingMgmt.Visibility = Visibility.Collapsed;
-
+            NavActorMgmt.Visibility = Visibility.Collapsed;
             NavSellTicket.Visibility = Visibility.Collapsed;
             NavStaffBookingMgmt.Visibility = Visibility.Collapsed;
 
@@ -77,6 +79,7 @@ namespace StageX_DesktopApp
                 NavTheaterMgmt.Visibility = Visibility.Visible;
                 NavPerformanceMgmt.Visibility = Visibility.Visible;
                 NavAccountMgmt.Visibility = Visibility.Visible;
+                NavActorMgmt.Visibility = Visibility.Visible;
                 //NavAdminBookingMgmt.Visibility = Visibility.Visible; // Nút quản lý đơn hàng
             }
             else if (user.Role == "Nhân viên")
@@ -95,6 +98,7 @@ namespace StageX_DesktopApp
             NavTheaterMgmt.Click += (s, e) => MainContentFrame.Navigate(_theaterSeatPage);
             NavPerformanceMgmt.Click += (s, e) => MainContentFrame.Navigate(_performancePage);
             NavAccountMgmt.Click += (s, e) => MainContentFrame.Navigate(_accountPage);
+            NavActorMgmt.Click += (s, e) => MainContentFrame.Navigate(new ActorManagementPage());
 
             // GHI CHÚ: KẾT NỐI TRANG QUẢN LÝ ĐƠN HÀNG
             //NavAdminBookingMgmt.Click += (s, e) => MainContentFrame.Navigate(_bookingPage);

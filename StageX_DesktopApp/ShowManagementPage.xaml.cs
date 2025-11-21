@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.EntityFrameworkCore; // <-- Dùng EF Core
+using Microsoft.EntityFrameworkCore; // Dùng EF Core
 
 namespace StageX_DesktopApp
 {
@@ -16,141 +16,149 @@ namespace StageX_DesktopApp
             InitializeComponent();
         }
 
+        // Sự kiện Loaded: Được phép dùng 'async void'
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            // Tải dữ liệu lần đầu (không lọc)
+            // Gọi các hàm logic (trả về Task) và chờ (await) chúng
+            await LoadFormDataAsync();
             await LoadShowsAsync();
-            await LoadGenresForListBoxAsync();
         }
 
-        /// <summary>
-        /// Ghi chú: Tải danh sách Thể loại (cho CẢ 2 bên)
-        /// </summary>
-        private async Task LoadGenresForListBoxAsync()
+        // --- CÁC HÀM LOGIC (SỬA TỪ 'VOID' THÀNH 'TASK') ---
+        // Để có thể 'await' được ở chỗ khác
+
+        private async Task LoadFormDataAsync()
         {
             try
             {
                 using (var context = new AppDbContext())
                 {
-                    var genres = await context.Genres
-                                               .OrderBy(g => g.GenreName)
-                                               .ToListAsync();
-
-                    // 1. Tải cho Form (bên trái)
+                    // 1. Tải Thể loại
+                    var genres = await context.Genres.OrderBy(g => g.GenreName).AsNoTracking().ToListAsync();
                     GenresListBox.ItemsSource = genres;
 
-                    // 2. Tải cho Filter (bên phải)
-                    var filterGenres = genres.ToList(); // Tạo bản sao
-                    // Thêm 1 dòng "Tất cả"
-                    filterGenres.Insert(0, new Genre { GenreId = 0, GenreName = "-- Tất cả thể loại --" });
+                    // 2. Gán cho Filter
+                    var filterGenres = genres.ToList();
+                    filterGenres.Insert(0, new Genre { GenreId = 0, GenreName = "-- Tất cả --" });
                     FilterGenreComboBox.ItemsSource = filterGenres;
-                    FilterGenreComboBox.SelectedIndex = 0; // Chọn dòng "Tất cả"
+                    FilterGenreComboBox.SelectedIndex = 0;
+
+                    // 3. Tải Diễn viên
+                    var actors = await context.Actors
+                                            .Where(a => a.Status == "Hoạt động")
+                                            .OrderBy(a => a.FullName)
+                                            .AsNoTracking()
+                                            .ToListAsync();
+                    ActorsListBox.ItemsSource = actors;
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Lỗi khi tải thể loại: {ex.Message}");
-            }
+            catch (Exception ex) { MessageBox.Show($"Lỗi tải dữ liệu form: {ex.Message}"); }
         }
 
-        /// <summary>
-        /// Ghi chú: Tải Vở diễn (VỚI BỘ LỌC)
-        /// </summary>
-        private async Task LoadShowsAsync(string searchTerm = "", int genreId = 0)
+        // Hàm này cũng sửa thành Task
+        private async Task LoadShowsAsync(string keyword = "", int genreId = 0)
         {
             try
             {
                 using (var context = new AppDbContext())
                 {
-                    // Bắt đầu truy vấn
                     var query = context.Shows
-                                       .Include(s => s.Genres) // Tải kèm Thể loại
-                                       .OrderBy(s => s.Title)
-                                       .AsQueryable(); // Chuyển sang IQueryable
+                                   .Include(s => s.Genres) // Load kèm Thể loại
+                                   .Include(s => s.Actors) // Load kèm Diễn viên
+                                   .OrderByDescending(s => s.ShowId)
+                                   .AsQueryable();
 
-                    // 1. Lọc theo tên (Tra cứu)
-                    if (!string.IsNullOrWhiteSpace(searchTerm))
-                    {
-                        query = query.Where(s => s.Title.Contains(searchTerm));
-                    }
+                    if (!string.IsNullOrEmpty(keyword))
+                        query = query.Where(s => s.Title.Contains(keyword));
 
-                    // 2. Lọc theo thể loại (Genre)
                     if (genreId > 0)
-                    {
                         query = query.Where(s => s.Genres.Any(g => g.GenreId == genreId));
-                    }
 
-                    // Thực thi truy vấn
                     var shows = await query.ToListAsync();
 
-                    // (Code tạo chuỗi GenresDisplay giữ nguyên)
-                    foreach (var show in shows)
+                    // Xử lý hiển thị
+                    foreach (var s in shows)
                     {
-                        if (show.Genres != null && show.Genres.Any())
-                        {
-                            show.GenresDisplay = string.Join(", ", show.Genres.Select(g => g.GenreName));
-                        }
-                        else
-                        {
-                            show.GenresDisplay = "(Chưa có)";
-                        }
+                        s.GenresDisplay = (s.Genres != null && s.Genres.Any())
+                            ? string.Join(", ", s.Genres.Select(g => g.GenreName))
+                            : "";
+
+                        s.ActorsDisplay = (s.Actors != null && s.Actors.Any())
+                            ? string.Join(", ", s.Actors.Select(a => a.FullName))
+                            : "(Chưa có)";
                     }
                     ShowsGrid.ItemsSource = shows;
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Lỗi khi tải vở diễn: {ex.Message}");
-            }
+            catch (Exception ex) { MessageBox.Show($"Lỗi tải vở diễn: {ex.Message}"); }
         }
 
-        /// <summary>
-        /// GHI CHÚ: HÀM MỚI - Xử lý nút "Lọc"
-        /// </summary>
+        // --- CÁC HÀM SỰ KIỆN (BUTTON CLICK) ---
+        // Các hàm này BẮT BUỘC phải là 'async void'
+
         private async void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            string searchTerm = SearchTitleTextBox.Text;
+            string keyword = SearchTitleTextBox.Text.Trim();
             int genreId = (int)(FilterGenreComboBox.SelectedValue ?? 0);
 
-            // Gọi hàm LoadShowsAsync với các tham số lọc
-            await LoadShowsAsync(searchTerm, genreId);
+            // Gọi hàm Task và await nó
+            await LoadShowsAsync(keyword, genreId);
         }
-
-        // --- CÁC HÀM CRUD (Thêm/Sửa/Xóa) ---
 
         private void ClearShowButton_Click(object sender, RoutedEventArgs e)
         {
             ShowIdTextBox.Text = "";
             ShowTitleTextBox.Text = "";
-            ShowDirectorTextBox.Text = "";
             ShowDurationTextBox.Text = "";
+            ShowDirectorTextBox.Text = "";
             ShowPosterTextBox.Text = "";
             ShowDescriptionTextBox.Text = "";
+
             GenresListBox.SelectedItems.Clear();
+            ActorsListBox.SelectedItems.Clear();
+
             ShowsGrid.SelectedItem = null;
         }
 
         private void ShowsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ShowsGrid.SelectedItem is Show selectedShow)
+            if (ShowsGrid.SelectedItem is Show show)
             {
-                ShowIdTextBox.Text = selectedShow.ShowId.ToString();
-                ShowTitleTextBox.Text = selectedShow.Title;
-                ShowDirectorTextBox.Text = selectedShow.Director;
-                ShowDurationTextBox.Text = selectedShow.DurationMinutes.ToString();
-                ShowPosterTextBox.Text = selectedShow.PosterImageUrl;
-                ShowDescriptionTextBox.Text = selectedShow.Description;
+                ShowIdTextBox.Text = show.ShowId.ToString();
+                ShowTitleTextBox.Text = show.Title;
+                ShowDurationTextBox.Text = show.DurationMinutes.ToString();
+                ShowDirectorTextBox.Text = show.Director;
+                ShowPosterTextBox.Text = show.PosterImageUrl;
+                ShowDescriptionTextBox.Text = show.Description;
 
+                // 1. Chọn lại Thể loại
                 GenresListBox.SelectedItems.Clear();
-                if (selectedShow.Genres != null)
+                if (show.Genres != null)
                 {
-                    foreach (var genreInShow in selectedShow.Genres)
+                    foreach (var g in show.Genres)
                     {
-                        foreach (var itemInList in GenresListBox.Items)
+                        foreach (var item in GenresListBox.Items)
                         {
-                            if (itemInList is Genre genreInList && genreInList.GenreId == genreInShow.GenreId)
+                            if (item is Genre listGenre && listGenre.GenreId == g.GenreId)
                             {
-                                GenresListBox.SelectedItems.Add(itemInList);
+                                GenresListBox.SelectedItems.Add(item);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 2. Chọn lại Diễn viên
+                ActorsListBox.SelectedItems.Clear();
+                if (show.Actors != null)
+                {
+                    foreach (var a in show.Actors)
+                    {
+                        foreach (var item in ActorsListBox.Items)
+                        {
+                            if (item is Actor listActor && listActor.ActorId == a.ActorId)
+                            {
+                                ActorsListBox.SelectedItems.Add(item);
                                 break;
                             }
                         }
@@ -161,97 +169,90 @@ namespace StageX_DesktopApp
 
         private async void SaveShowButton_Click(object sender, RoutedEventArgs e)
         {
-            // ... (Code kiểm tra validate Title và Duration giữ nguyên) ...
             string title = ShowTitleTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(title)) { /* ... */ return; }
-            if (!int.TryParse(ShowDurationTextBox.Text, out int duration) || duration <= 0) { /* ... */ return; }
+            if (string.IsNullOrEmpty(title)) { MessageBox.Show("Nhập tiêu đề!"); return; }
+            if (!int.TryParse(ShowDurationTextBox.Text, out int duration)) { MessageBox.Show("Thời lượng phải là số!"); return; }
 
             try
             {
                 using (var context = new AppDbContext())
                 {
-                    Show showToSave;
+                    Show show;
+                    bool isNew = false;
 
-                    // Logic SỬA (UPDATE)
-                    if (int.TryParse(ShowIdTextBox.Text, out int showId) && showId > 0)
+                    if (int.TryParse(ShowIdTextBox.Text, out int id) && id > 0)
                     {
-                        showToSave = await context.Shows
+                        show = await context.Shows
                                             .Include(s => s.Genres)
-                                            .FirstOrDefaultAsync(s => s.ShowId == showId);
-                        if (showToSave == null) return;
+                                            .Include(s => s.Actors)
+                                            .FirstOrDefaultAsync(s => s.ShowId == id);
+                        if (show == null) return;
                     }
-                    // Logic THÊM MỚI (ADD)
                     else
                     {
-                        showToSave = new Show
-                        {
-                            Status = "Sắp chiếu",
-                            Genres = new List<Genre>()
-                        };
-                        context.Shows.Add(showToSave);
+                        show = new Show { Status = "Sắp chiếu" };
+                        context.Shows.Add(show);
+                        isNew = true;
                     }
 
-                    // 2. Cập nhật thông tin từ Form
-                    showToSave.Title = title;
-                    showToSave.Director = ShowDirectorTextBox.Text.Trim();
-                    showToSave.DurationMinutes = duration;
-                    showToSave.PosterImageUrl = ShowPosterTextBox.Text.Trim();
-                    showToSave.Description = ShowDescriptionTextBox.Text.Trim();
+                    // Cập nhật thông tin cơ bản
+                    show.Title = title;
+                    show.DurationMinutes = duration;
+                    show.Director = ShowDirectorTextBox.Text;
+                    show.PosterImageUrl = ShowPosterTextBox.Text;
+                    show.Description = ShowDescriptionTextBox.Text;
 
-                    // 3. Cập nhật Thể loại
-                    showToSave.Genres.Clear();
-                    foreach (var item in GenresListBox.SelectedItems)
+                    // ==================== PHẦN QUAN TRỌNG NHẤT – SỬA Ở ĐÂY ====================
+                    // Cách 2 chuẩn nhất: chỉ lấy ID → query lại → add → không bao giờ bị lỗi tracking nữa
+                    var selectedGenreIds = GenresListBox.SelectedItems.OfType<Genre>().Select(g => g.GenreId).ToList();
+                    var selectedActorIds = ActorsListBox.SelectedItems.OfType<Actor>().Select(a => a.ActorId).ToList();
+
+                    // Xóa hết quan hệ cũ
+                    show.Genres.Clear();
+                    show.Actors.Clear();
+
+                    // Thêm lại từ database (EF tự track, không cần Attach)
+                    if (selectedGenreIds.Any())
                     {
-                        if (item is Genre selectedGenre)
-                        {
-                            context.Genres.Attach(selectedGenre);
-                            showToSave.Genres.Add(selectedGenre);
-                        }
+                        var genres = await context.Genres
+                                                  .Where(g => selectedGenreIds.Contains(g.GenreId))
+                                                  .ToListAsync();
+                        foreach (var g in genres) show.Genres.Add(g);
                     }
 
-                    // 4. Lưu CSDL
-                    await context.SaveChangesAsync();
-                    MessageBox.Show("Lưu vở diễn thành công!");
-                }
+                    if (selectedActorIds.Any())
+                    {
+                        var actors = await context.Actors
+                                                  .Where(a => selectedActorIds.Contains(a.ActorId))
+                                                  .ToListAsync();
+                        foreach (var a in actors) show.Actors.Add(a);
+                    }
+                    // ==================== HẾT PHẦN SỬA ====================
 
-                // 5. GHI CHÚ: Tải lại Bảng (với filter cũ)
-                await LoadShowsAsync(SearchTitleTextBox.Text, (int)(FilterGenreComboBox.SelectedValue ?? 0));
-                ClearShowButton_Click(null, null);
+                    await context.SaveChangesAsync();
+                    MessageBox.Show(isNew ? "Thêm mới thành công!" : "Cập nhật thành công!");
+
+                    ClearShowButton_Click(null, null);
+                    await LoadShowsAsync(SearchTitleTextBox.Text.Trim(),
+                                        (int)(FilterGenreComboBox.SelectedValue ?? 0));
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi lưu vở diễn: {ex.Message}\n\nInner: {ex.InnerException?.Message}");
+                MessageBox.Show($"Lỗi: {ex.Message}\nInner: {ex.InnerException?.Message}");
             }
         }
 
-        private async void DeleteShowButton_Click(object sender, RoutedEventArgs e)
+        private void EditButton_Click(object sender, RoutedEventArgs e)
         {
-            if ((sender as Button)?.DataContext is Show showToDelete)
+            var btn = sender as Button;
+            var show = btn?.DataContext as Show;
+            if (show != null)
             {
-                var result = MessageBox.Show($"Bạn có chắc muốn xóa vở diễn '{showToDelete.Title}'?", "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    try
-                    {
-                        using (var context = new AppDbContext())
-                        {
-                            var showToRemove = new Show { ShowId = showToDelete.ShowId };
-                            context.Shows.Remove(showToRemove);
-                            await context.SaveChangesAsync();
-                        }
-                        // GHI CHÚ: Tải lại Bảng (với filter cũ)
-                        await LoadShowsAsync(SearchTitleTextBox.Text, (int)(FilterGenreComboBox.SelectedValue ?? 0));
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Lỗi khi xóa: {ex.Message}.\nLưu ý: Bạn không thể xóa vở diễn nếu nó đang có Suất diễn.");
-                    }
-                }
+                ShowsGrid.SelectedItem = show;
+                ShowTitleTextBox.Focus();
             }
         }
-
-        // Thêm STT cho Bảng
         private void ShowsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
             e.Row.Header = (e.Row.GetIndex() + 1).ToString();

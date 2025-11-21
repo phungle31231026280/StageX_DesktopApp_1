@@ -125,7 +125,19 @@
         <DataGrid Grid.Row="4"
                   x:Name="PerformancesGrid"
                   IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
-                  LoadingRow="PerformancesGrid_LoadingRow" HeadersVisibility="Column, Row">
+                  LoadingRow="PerformancesGrid_LoadingRow" HeadersVisibility="Column, Row"
+                  Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+       RowHeaderWidth="0" Background="Transparent" RowBackground="Transparent" >
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="Black"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="FontSize" Value="14"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </Style>
+            </DataGrid.Resources>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding PerformanceId}" Width="50" Visibility="Collapsed"/>
                 <DataGridTextColumn Header="Vở diễn" Binding="{Binding ShowTitle}" Width="2*"/>

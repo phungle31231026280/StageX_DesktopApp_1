@@ -197,7 +197,19 @@
 
                             <DataGrid x:Name="CategoriesGrid" MaxHeight="200" Margin="0,15,0,0"
                                       IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
-                                      LoadingRow="CategoriesGrid_LoadingRow" HeadersVisibility="Column, Row">
+                                      LoadingRow="CategoriesGrid_LoadingRow" HeadersVisibility="Column, Row"
+                                        Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+      RowHeaderWidth="0">
+                                <DataGrid.Resources>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="Black"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Padding" Value="10,8"/>
+                                        <Setter Property="FontSize" Value="14"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Style>
+                                </DataGrid.Resources>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="ID" Binding="{Binding CategoryId}" Width="30" Visibility="Collapsed"/>
                                     <DataGridTextColumn Header="Tên Hạng" Binding="{Binding CategoryName}" Width="*"/>
@@ -259,7 +271,19 @@
                           IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" 
                           LoadingRow="TheatersGrid_LoadingRow" HeadersVisibility="Column, Row"
                           SelectionChanged="TheatersGrid_SelectionChanged"
-                          SelectionMode="Single">
+                          SelectionMode="Single"
+                            Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+       RowHeaderWidth="0">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Black"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding TheaterId}" Width="50" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="Tên Rạp" Binding="{Binding Name}" Width="*"/>

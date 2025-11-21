@@ -45,6 +45,11 @@
                     <ListBox x:Name="GenresListBox" Height="120" SelectionMode="Multiple"
                              Background="#FF333333" Foreground="White" BorderThickness="0"
                              DisplayMemberPath="GenreName"/>
+                    <TextBlock Text="Diễn viên tham gia (Giữ Ctrl để chọn nhiều):" Margin="0,15,0,5" Foreground="Gray"/>
+                    <ListBox x:Name="ActorsListBox" Height="120" SelectionMode="Multiple"
+                             Background="#FF333333" Foreground="White" BorderThickness="0"
+                             DisplayMemberPath="FullName"/>
+                    <TextBlock Text="Mô tả:" Margin="0,10,0,5" Foreground="Gray"/>
                     <TextBlock Text="Mô tả:" Margin="0,10,0,5"/>
                     <TextBox x:Name="ShowDescriptionTextBox" Padding="5" FontSize="14"
                              Height="100" TextWrapping="Wrap" AcceptsReturn="True"
@@ -54,7 +59,9 @@
                         <Button x:Name="SaveShowButton" Content="Lưu Vở diễn" Style="{StaticResource ButtonAddStyle}" Click="SaveShowButton_Click"/>
                         <Button x:Name="ClearShowButton" Content="Làm mới" Margin="10,0,0,0" Padding="10,5" Click="ClearShowButton_Click"/>
                     </StackPanel>
+                    
                 </StackPanel>
+                
             </ScrollViewer>
         </Border>
 
@@ -95,17 +102,34 @@
                       x:Name="ShowsGrid"
                       IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
                       LoadingRow="ShowsGrid_LoadingRow" HeadersVisibility="Column, Row"
-                      SelectionChanged="ShowsGrid_SelectionChanged">
+                      SelectionChanged="ShowsGrid_SelectionChanged" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+    RowHeaderWidth="0">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Black"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </Style>
+                </DataGrid.Resources>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" Binding="{Binding ShowId}" Width="50" Visibility="Collapsed"/>
-                    <DataGridTextColumn Header="Tiêu đề" Binding="{Binding Title}" Width="2*"/>
+                    <DataGridTextColumn Header="Tiêu đề" Binding="{Binding Title}" Width="1.5*"/>
+                    <DataGridTextColumn Header="Đạo diễn" Binding="{Binding Director}" Width="*"/>
                     <DataGridTextColumn Header="Thời lượng" Binding="{Binding DurationMinutes}" Width="Auto"/>
+
                     <DataGridTextColumn Header="Thể loại" Binding="{Binding GenresDisplay}" Width="*"/>
-                    <DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="Auto"/>
-                    <DataGridTemplateColumn Header="Xóa" Width="Auto">
+
+                    <DataGridTextColumn Header="Diễn viên" Binding="{Binding ActorsDisplay}" Width="1.5*"/>
+
+                    <DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="Auto" Visibility="Collapsed"/>
+
+                    <DataGridTemplateColumn Header="Hành động" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button x:Name="DeleteShowButton" Content="Xóa" Style="{StaticResource ButtonDeleteStyle}" Click="DeleteShowButton_Click"/>
+                                <Button Content="Sửa" Background="#FF2196F3" Foreground="White" Padding="8, 4" Click="EditButton_Click"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

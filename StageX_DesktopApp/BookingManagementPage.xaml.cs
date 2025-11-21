@@ -44,7 +44,7 @@ namespace StageX_DesktopApp
         }
 
         // --- TẢI VÀ TRA CỨU ---
-        private async void LoadBookingsAsync(string keyword = "", string statusFilter = "-- Tất cả --")
+        private async Task LoadBookingsAsync(string keyword = "", string statusFilter = "-- Tất cả --")
         {
             try
             {
@@ -124,7 +124,9 @@ namespace StageX_DesktopApp
         {
             if (e.Key == System.Windows.Input.Key.Enter)
             {
-                 SearchButton_Click(null, null);
+                 
+                
+                ;
             }
         }
 

@@ -28,6 +28,8 @@ namespace StageX_DesktopApp
         public DbSet<TicketSold> TicketSolds { get; set; }
         public DbSet<TopShow> TopShows { get; set; }
 
+        public DbSet<Actor> Actors { get; set; }
+
         // Phân bố đánh giá theo sao. Lớp này phục vụ biểu đồ donut
         public DbSet<RatingDistribution> RatingDistributions { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -45,6 +47,14 @@ namespace StageX_DesktopApp
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<User>().ToTable("users");
+
+            modelBuilder.Entity<UserDetail>(entity =>
+            {
+                entity.ToTable("user_detail"); // Tên bảng trong MySQL
+                entity.HasKey(e => e.UserId);  // Khóa chính
+            });
+
             // Mối quan hệ 1-1 (User/UserDetail)
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserDetail)
@@ -114,6 +124,15 @@ namespace StageX_DesktopApp
             modelBuilder.Entity<AvailableSeat>().HasNoKey().ToView(null);
             modelBuilder.Entity<CreateBookingResult>().HasNoKey().ToView(null);
 
+            modelBuilder.Entity<Actor>().ToTable("actors");
+            modelBuilder.Entity<Show>()
+                .HasMany(s => s.Actors)
+                .WithMany(a => a.Shows)
+                .UsingEntity<Dictionary<string, object>>(
+                    "show_actors", // Tên bảng trong CSDL
+                    j => j.HasOne<Actor>().WithMany().HasForeignKey("actor_id"),
+                    j => j.HasOne<Show>().WithMany().HasForeignKey("show_id")
+                );
         }
     }
 }

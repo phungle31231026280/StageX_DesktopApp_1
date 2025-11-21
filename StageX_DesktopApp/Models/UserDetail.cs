@@ -10,13 +10,13 @@ namespace StageX_DesktopApp.Models
         [Column("user_id")]
         public int UserId { get; set; }
         [Column("full_name")]
-        public string FullName { get; set; }
+        public string? FullName { get; set; }
         [Column("date_of_birth")]
-        public DateTime DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
         [Column("address")]
-        public string Address { get; set; }
+        public string? Address { get; set; }
         [Column("phone")]
-        public string Phone { get; set; }
+        public string? Phone { get; set; }
 
         public virtual User User { get; set; }
     }

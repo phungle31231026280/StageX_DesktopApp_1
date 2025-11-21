@@ -65,11 +65,24 @@
             <TextBlock Text="Danh sách thể loại" FontSize="18" FontWeight="SemiBold" Margin="0,30,0,10"/>
             <DataGrid x:Name="GenresGrid"
                   IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
-                  LoadingRow="GenresGrid_LoadingRow" HeadersVisibility="Column, Row">
+                  LoadingRow="GenresGrid_LoadingRow" HeadersVisibility="Column"
+                      Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"  RowHeaderWidth="0">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="Black"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                    </Style>
+                </DataGrid.Resources>
                 <DataGrid.Columns>
+
                     <DataGridTextColumn Header="ID" Binding="{Binding GenreId}" Width="50" Visibility="Collapsed"/>
                     <DataGridTextColumn Header="Tên thể loại" Binding="{Binding GenreName}" Width="*"/>
                     <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                       
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">

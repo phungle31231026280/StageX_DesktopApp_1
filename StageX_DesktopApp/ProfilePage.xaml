@@ -35,12 +35,12 @@
         <Border Grid.Row="1" Background="#FF0C1220" CornerRadius="8" Padding="20">
             <StackPanel Orientation="Horizontal">
                 <Border Width="60" Height="60" CornerRadius="30" Background="#FFffc107" Margin="0,0,20,0">
-                    <TextBlock x:Name="InfoInitial" Text="A" FontSize="32" FontWeight="Bold" Foreground="Black"
+                    <TextBlock x:Name="InfoInitial" Text="U" FontSize="32" FontWeight="Bold" Foreground="Black"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock x:Name="InfoAccountName" Text="tên_tài_khoản" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock x:Name="InfoEmail" Text="email@example.com" FontSize="14" Foreground="Gray"/>
+                    <TextBlock x:Name="InfoAccountName" Text="Loading..." FontSize="18" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="InfoEmail" Text="..." FontSize="14" Foreground="Gray"/>
                 </StackPanel>
             </StackPanel>
         </Border>

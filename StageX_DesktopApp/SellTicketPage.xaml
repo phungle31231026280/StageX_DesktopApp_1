@@ -47,7 +47,19 @@
                 <TextBlock Text="3. Thông tin chi tiết" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" />
                 <TextBlock x:Name="SelectedShowText" FontSize="14" FontWeight="SemiBold" Margin="0,5,0,0" />
                 <TextBlock x:Name="SelectedPerformanceText" FontSize="14" Margin="0,0,0,5" />
-                <DataGrid x:Name="BillGrid" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" Height="160">
+                <DataGrid x:Name="BillGrid" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" Height="160" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
+      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+       RowHeaderWidth="0">
+
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Black"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Ghế" Binding="{Binding SeatLabel}" Width="*" />
                         <DataGridTextColumn Header="Đơn giá" Binding="{Binding Price, StringFormat='N0'}" Width="*" />

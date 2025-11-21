@@ -33,7 +33,11 @@ namespace StageX_DesktopApp.Models
         [NotMapped]
         public string GenresDisplay { get; set; }
 
+        [NotMapped]
+        public string ActorsDisplay { get; set; }
+
         // Ghi chú: Mối quan hệ Nhiều-Nhiều
         public virtual ICollection<Genre> Genres { get; set; }
+        public virtual ICollection<Actor> Actors { get; set; } = new List<Actor>();
     }
 }
