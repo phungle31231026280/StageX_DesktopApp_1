@@ -4,7 +4,7 @@
         Title="StageX - Hệ thống Quản lý" 
         Height="768" Width="1366"
         WindowStartupLocation="CenterScreen"
-        Background="#FF1A1A1A" Foreground="White">
+        Background="#FF1A1A1A" Foreground="White" WindowState="Maximized">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -24,10 +24,10 @@
                 <Button x:Name="NavDashboard" Content="Bảng điều khiển" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavGenreMgmt" Content="Quản lý Thể loại" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavShowMgmt" Content="Quản lý Vở diễn" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
+                <Button x:Name="NavActorMgmt" Content="Quản lý Diễn viên" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavTheaterMgmt" Content="Quản lý Rạp, Ghế &amp; Hạng ghế" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavPerformanceMgmt" Content="Quản lý Suất diễn" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
                 <Button x:Name="NavAccountMgmt" Content="Quản lý Tài khoản" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
-                <Button x:Name="NavStaffBookingMgmt" Content="Quản lý Đơn hàng &amp; In vé" Margin="10,5" Padding="15,10" FontWeight="SemiBold"/>
 
                 <Button x:Name="NavSellTicket" Content="Bán vé" Margin="10,5" Padding="15,10" FontWeight="SemiBold" />
                 <Button x:Name="NavStaffBookingMgmt" Content="Quản lý Đơn hàng &amp; In vé" Padding="15,10" FontWeight="SemiBold" Width="222"/>

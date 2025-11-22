@@ -57,4 +57,51 @@ namespace StageX_DesktopApp.Models
     {
         public int booking_id { get; set; }
     }
+
+    /// <summary>
+    /// Mô tả trạng thái ghế cho một suất diễn cụ thể. Khác với AvailableSeat vì nó bao gồm
+    /// cả ghế đã bán. Trường is_sold cho biết ghế đã được đặt hay chưa. Được trả về từ
+    /// thủ tục proc_seats_with_status.
+    /// </summary>
+    public class SeatStatus
+    {
+        public int seat_id { get; set; }
+        public string row_char { get; set; } = string.Empty;
+        public int seat_number { get; set; }
+        public string? category_name { get; set; }
+        public decimal base_price { get; set; }
+        public bool is_sold { get; set; }
+
+        // Tên ghế hiển thị (hàng + số)
+        public string SeatLabel => $"{row_char}{seat_number}";
+    }
+
+    /// <summary>
+    /// Mô tả thông tin suất diễn mở bán/đang diễn dùng cho chế độ Giờ cao điểm. Thủ tục
+    /// proc_top3_nearest_performances_extended trả về các trường này. Bao gồm tên vở diễn,
+    /// thời gian, giá vé, số ghế đã bán và tổng số ghế để xác định đã bán hết hay chưa.
+    /// Thuộc tính Display dùng để hiển thị lên nút, và IsSoldOut để vô hiệu hoá nút khi
+    /// suất diễn đã hết vé.
+    /// </summary>
+    public class PeakPerformanceInfo
+    {
+        public int performance_id { get; set; }
+        public string show_title { get; set; } = string.Empty;
+        public DateTime performance_date { get; set; }
+        public TimeSpan start_time { get; set; }
+        public TimeSpan? end_time { get; set; }
+        public decimal price { get; set; }
+        public int sold_count { get; set; }
+        public int total_count { get; set; }
+
+        /// <summary>
+        /// Xác định suất đã bán hết vé hay chưa.
+        /// </summary>
+        public bool IsSoldOut => total_count > 0 && sold_count >= total_count;
+
+        /// <summary>
+        /// Chuỗi hiển thị trên nút: gồm tên vở diễn và thời gian bắt đầu. Dùng dấu xuống dòng để tách 2 dòng.
+        /// </summary>
+        public string Display => $"{show_title}\n{performance_date:yyyy-MM-dd} {start_time:hh\\:mm}";
+    }
 }

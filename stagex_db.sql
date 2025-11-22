@@ -782,6 +782,90 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_unverified_user_passwor
     WHERE user_id = in_user_id;
 END$$
 
+--
+-- Thủ tục mới: xóa tất cả ghế của một rạp theo theater_id.
+--  Được sử dụng trong ứng dụng để thay thế câu truy vấn trực tiếp DELETE FROM seats WHERE theater_id = ...
+--  Tham số:
+--      in_theater_id INT: mã rạp cần xóa ghế.
+--  Chức năng:
+--      Xóa toàn bộ các bản ghi trong bảng seats thuộc rạp này.
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_seats_by_theater` (IN `in_theater_id` INT)
+BEGIN
+    DELETE FROM seats WHERE theater_id = in_theater_id;
+END$$
+
+--
+-- Thủ tục mới: trả về tất cả ghế của một suất diễn cùng trạng thái đã đặt/chưa.
+--  Thay vì chỉ lấy ghế còn trống, thủ tục này giúp vẽ sơ đồ đầy đủ và đánh dấu ghế đã bán.
+--  Tham số:
+--      in_performance_id INT: mã suất diễn cần lấy ghế
+--  Kết quả:
+--      seat_id, row_char, seat_number, category_name, base_price, is_sold (0/1)
+--  Trong đó is_sold = 1 nếu seat_performance.status <> 'trống'.
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_seats_with_status` (IN `in_performance_id` INT)
+BEGIN
+    SELECT s.seat_id,
+           s.row_char,
+           s.seat_number,
+           IFNULL(sc.category_name, '') AS category_name,
+           IFNULL(sc.base_price, 0)     AS base_price,
+           (sp.status <> 'trống')       AS is_sold
+    FROM seats s
+    JOIN seat_performance sp ON sp.seat_id = s.seat_id
+    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
+    WHERE sp.performance_id = in_performance_id;
+END$$
+
+--
+-- Thủ tục mới: lấy TOP 3 suất diễn gần nhất kèm theo thông tin tên vở, số ghế đã bán và tổng số ghế.
+--  Phục vụ chế độ "Giờ cao điểm" của trang bán vé. Cho phép xác định những suất sắp diễn và tình trạng
+--  còn vé để vô hiệu hóa nút khi đã bán hết. Nếu đã tồn tại thủ tục cùng tên, vui lòng cập nhật.
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances_extended` ()
+BEGIN
+    -- Cập nhật trạng thái trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+    -- Lấy top 3 suất diễn sớm nhất đang mở bán hoặc đang diễn, kèm thông tin vở diễn và số vé đã bán
+    SELECT p.performance_id,
+           s.title AS show_title,
+           p.performance_date,
+           p.start_time,
+           p.end_time,
+           p.price,
+           SUM(sp.status <> 'trống') AS sold_count,
+           COUNT(sp.seat_id)         AS total_count
+    FROM performances p
+    JOIN shows s ON s.show_id = p.show_id
+    JOIN seat_performance sp ON sp.performance_id = p.performance_id
+    WHERE p.status IN ('Đang mở bán','Đang diễn')
+    GROUP BY p.performance_id
+    ORDER BY CONCAT(p.performance_date, ' ', p.start_time) ASC
+    LIMIT 3;
+END$$
+
+--
+-- Thủ tục mới: lấy TOP 3 suất diễn gần nhất (còn đang mở bán hoặc đang diễn).
+--  Thủ tục này phục vụ chế độ "Giờ cao điểm" của trang bán vé dành cho nhân viên.
+--  Nó sẽ cập nhật lại trạng thái suất diễn/vở diễn trước khi lấy dữ liệu và sắp xếp theo thời gian sớm nhất.
+--  Chỉ trả về 3 suất diễn có thời gian gần nhất, bao gồm: performance_id, performance_date, start_time, end_time, price.
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances` ()
+BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn để đảm bảo dữ liệu chính xác
+    CALL proc_update_statuses();
+    -- Lấy các suất đang mở bán hoặc đang diễn, sắp xếp tăng dần theo ngày giờ bắt đầu, giới hạn 3 suất
+    SELECT performance_id,
+           performance_date,
+           start_time,
+           end_time,
+           price
+    FROM performances
+    WHERE status IN ('Đang mở bán','Đang diễn')
+    ORDER BY CONCAT(performance_date, ' ', start_time) ASC
+    LIMIT 3;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_user_password` (IN `in_user_id` INT, IN `in_password` VARCHAR(255))   BEGIN
     UPDATE users
     SET password = in_password,

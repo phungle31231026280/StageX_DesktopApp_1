@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
 namespace StageX_DesktopApp
@@ -23,14 +24,32 @@ namespace StageX_DesktopApp
     /// </summary>
     public partial class SellTicketPage : Page
     {
-        // Vở diễn và suất chiếu đang được chọn
+        // Vở diễn đang được chọn (chỉ dùng trong chế độ Mặc định)
         private ShowInfo? selectedShow;
-        private PerformanceInfo? selectedPerformance;
-        // Danh sách ghế trống trả về từ DB
-        private List<AvailableSeat> seatList = new();
+        // Thay thế selectedPerformance bằng các trường cơ bản để dùng cho cả hai chế độ
+        // Mã suất đang được chọn và giá cơ bản của suất
+        private int? selectedPerformanceId = null;
+        private decimal selectedPerformancePrice = 0;
+        private string selectedPerformanceDisplay = string.Empty;
+        // Danh sách ghế và trạng thái (bao gồm cả ghế đã bán) trả về từ DB
+        private List<SeatStatus> seatList = new();
         // Danh sách ghế đã chọn để tính tiền
         private ObservableCollection<BillSeat> billSeats = new();
         private string selectedPaymentMethod = "Tiền mặt";
+
+        // Chế độ bán vé hiện tại (false = Mặc định, true = Giờ cao điểm)
+        // Khi ở chế độ Giờ cao điểm, chúng ta ẩn combobox vở diễn và chỉ hiển thị TOP 3 suất diễn gần nhất.
+        private bool isPeakMode = false;
+        private bool isPageLoaded = false;
+
+        // Biến lưu hệ số phóng to/thu nhỏ của sơ đồ ghế. Giá trị mặc định = 1.0
+        private double seatScale = 1.0;
+
+        // Nút TOP suất diễn hiện đang được chọn ở chế độ Giờ cao điểm (dùng để tô viền)
+        private Button? selectedPeakButton = null;
+
+        // Danh sách TOP suất diễn được nạp ở chế độ Giờ cao điểm
+        private List<PeakPerformanceInfo> _peakPerformances = new();
 
         public SellTicketPage()
         {
@@ -44,6 +63,196 @@ namespace StageX_DesktopApp
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadShowsAsync();
+            isPageLoaded = true;
+        }
+
+        /// <summary>
+        /// Sự kiện thay đổi chế độ bán vé (Mặc định/Giờ cao điểm).
+        /// Khi ở chế độ Giờ cao điểm: ẩn phần chọn Vở diễn, nạp TOP 3 suất diễn gần nhất và đặt phương thức thanh toán mặc định là Chuyển khoản.
+        /// Khi quay lại Mặc định: hiển thị lại combobox Vở diễn và nạp danh sách vở như bình thường, đồng thời đặt lại phương thức thanh toán là Tiền mặt.
+        /// </summary>
+        private async void ModeRadio_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!isPageLoaded) return;
+            // xác định chế độ hiện tại dựa vào RadioButton
+            isPeakMode = PeakModeRadio.IsChecked == true;
+            if (isPeakMode)
+            {
+                // Ẩn panel vở diễn và panel combobox suất, hiển thị panel top3
+                if (ShowPanel != null) ShowPanel.Visibility = Visibility.Collapsed;
+                if (PerformancePanel != null) PerformancePanel.Visibility = Visibility.Collapsed;
+                if (PeakPerformancePanel != null) PeakPerformancePanel.Visibility = Visibility.Visible;
+                // Đặt phương thức thanh toán mặc định là Chuyển khoản (tự động bấm nút Chuyển khoản)
+                PaymentButton_Click(BankButton, null);
+                // Đặt lại nút đã chọn trong chế độ Giờ cao điểm
+                selectedPeakButton = null;
+                // Nạp TOP 3 suất diễn gần nhất
+                await LoadTopPerformancesAsync();
+                // Làm sạch QR và ô nhập tiền mặt
+                CustomerCashTextBox.Text = string.Empty;
+                ChangeTextBlock.Text = "0đ";
+                QrImage.Source = null;
+            }
+            else
+            {
+                // Hiện panel chọn vở diễn và combobox suất, ẩn panel top3
+                if (ShowPanel != null) ShowPanel.Visibility = Visibility.Visible;
+                if (PerformancePanel != null) PerformancePanel.Visibility = Visibility.Visible;
+                if (PeakPerformancePanel != null) PeakPerformancePanel.Visibility = Visibility.Collapsed;
+                // Đặt phương thức thanh toán mặc định là Tiền mặt (tự động bấm nút Tiền mặt)
+                PaymentButton_Click(CashButton, null);
+                // Xóa lựa chọn vở diễn và suất chiếu, làm sạch sơ đồ và hoá đơn
+                selectedPeakButton = null;
+                selectedShow = null;
+                selectedPerformanceId = null;
+                selectedPerformanceDisplay = string.Empty;
+                selectedPerformancePrice = 0;
+                ShowComboBox.SelectedItem = null;
+                PerformanceComboBox.ItemsSource = null;
+                SelectedShowText.Text = string.Empty;
+                SelectedPerformanceText.Text = string.Empty;
+                seatList.Clear();
+                billSeats.Clear();
+                BuildSeatMap();
+                UpdateTotal();
+                // Xoá dữ liệu nhập tiền mặt và QR
+                CustomerCashTextBox.Text = string.Empty;
+                ChangeTextBlock.Text = "0đ";
+                QrImage.Source = null;
+                // Nạp danh sách vở diễn như bình thường
+                await LoadShowsAsync();
+            }
+        }
+
+        /// <summary>
+        /// Nạp TOP 3 suất diễn gần nhất cho chế độ Giờ cao điểm.
+        /// Hàm này sẽ gọi stored procedure proc_top3_nearest_performances, thiết lập lại các lựa chọn và làm sạch sơ đồ ghế và bill.
+        /// </summary>
+        private async Task LoadTopPerformancesAsync()
+        {
+            // Hàm này nạp TOP 3 suất diễn gần nhất, bao gồm tên vở diễn và thông tin vé. Sau đó gán cho các button trong PeakPerformancePanel.
+            using var context = new AppDbContext();
+            try
+            {
+                var performances = await context.PeakPerformanceInfos.FromSqlRaw("CALL proc_top3_nearest_performances_extended()").ToListAsync();
+                // Đảm bảo có đúng 3 phần tử (nếu ít hơn thì thêm phần tử rỗng)
+                while (performances.Count < 3)
+                {
+                    performances.Add(new PeakPerformanceInfo());
+                }
+                // Lưu trữ danh sách này để sử dụng khi click
+                _peakPerformances = performances;
+                // Gán nội dung và trạng thái cho từng nút
+                var buttons = new[] { PeakButton1, PeakButton2, PeakButton3 };
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    var perf = performances[i];
+                    var btn = buttons[i];
+                    if (perf.performance_id == 0)
+                    {
+                        // Nếu không có đủ suất, ẩn nút
+                        btn.Visibility = Visibility.Collapsed;
+                        continue;
+                    }
+                    btn.Visibility = Visibility.Visible;
+                    btn.Content = perf.Display;
+                    btn.Tag = perf;
+                    // Nếu suất đã bán hết vé thì vô hiệu hóa
+                    btn.IsEnabled = !perf.IsSoldOut;
+                    // Màu sắc: nếu sold out thì xám, ngược lại nền xanh dương
+                    if (perf.IsSoldOut)
+                    {
+                        btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 80, 80));
+                    }
+                    else
+                    {
+                        btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
+                    }
+                    // Viền mặc định: sử dụng màu vàng và độ dày 1
+                    btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7));
+                    btn.BorderThickness = new Thickness(1);
+                    btn.Foreground = Brushes.White;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi nạp suất diễn: {ex.Message}");
+            }
+
+            // Đặt lại lựa chọn vở diễn và suất diễn
+            selectedShow = null;
+            selectedPerformanceId = null;
+            selectedPerformanceDisplay = string.Empty;
+            selectedPerformancePrice = 0;
+            ShowComboBox.ItemsSource = null;
+            SelectedShowText.Text = string.Empty;
+            SelectedPerformanceText.Text = string.Empty;
+            // Xoá danh sách ghế và bill
+            seatList.Clear();
+            billSeats.Clear();
+            BuildSeatMap();
+            UpdateTotal();
+        }
+
+        /// <summary>
+        /// Xử lý click vào một trong ba nút suất diễn ở chế độ Giờ cao điểm. Khi click,
+        /// gán performance được chọn, cập nhật thông tin hiển thị và nạp sơ đồ ghế.
+        /// </summary>
+        private async void PeakPerformanceButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn) return;
+            // Mỗi Button chứa một đối tượng PeakPerformanceInfo ở thuộc tính Tag
+            if (btn.Tag is not PeakPerformanceInfo perf) return;
+            // Nếu suất đã bán hết vé thì không xử lý gì thêm
+            if (perf.IsSoldOut) return;
+
+            // Tô viền đậm cho nút được chọn và trả viền mỏng cho nút trước đó
+            if (selectedPeakButton != null)
+            {
+                selectedPeakButton.BorderThickness = new Thickness(1);
+            }
+            btn.BorderThickness = new Thickness(3);
+            selectedPeakButton = btn;
+
+            // Gán thông tin suất chọn
+            selectedPerformanceId = perf.performance_id;
+            selectedPerformancePrice = perf.price;
+            selectedPerformanceDisplay = perf.Display;
+
+            // Hiển thị lại thông tin vở diễn và suất diễn ở khu vực 3
+            SelectedShowText.Text = $"Vở diễn: {perf.show_title}";
+            SelectedPerformanceText.Text = $"Suất chiếu: {selectedPerformanceDisplay}";
+
+            // Xóa bill cũ và danh sách ghế
+            billSeats.Clear();
+            seatList.Clear();
+            BuildSeatMap();
+            UpdateTotal();
+
+            // Nạp lại ghế cho suất vừa chọn
+            if (selectedPerformanceId != null)
+            {
+                await LoadSeatsAsync(selectedPerformanceId.Value);
+            }
+        }
+
+        /// <summary>
+        /// Nạp danh sách ghế và trạng thái (đã bán/chưa bán) cho suất diễn. Dùng chung cho mọi chế độ.
+        /// </summary>
+        private async Task LoadSeatsAsync(int performanceId)
+        {
+            using var context = new AppDbContext();
+            try
+            {
+                seatList = await context.SeatStatuses
+                                        .FromSqlInterpolated($"CALL proc_seats_with_status({performanceId})")
+                                        .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi nạp ghế: {ex.Message}");
+            }
+            BuildSeatMap();
         }
 
         /// <summary>
@@ -65,7 +274,10 @@ namespace StageX_DesktopApp
             SelectedShowText.Text = selectedShow != null ? $"Vở diễn: {selectedShow.title}" : string.Empty;
             // Xoá dữ liệu cũ
             PerformanceComboBox.ItemsSource = null;
-            selectedPerformance = null;
+            // Xóa thông tin suất diễn đang chọn
+            selectedPerformanceId = null;
+            selectedPerformancePrice = 0;
+            selectedPerformanceDisplay = string.Empty;
             SelectedPerformanceText.Text = string.Empty;
             seatList.Clear();
             billSeats.Clear();
@@ -73,7 +285,10 @@ namespace StageX_DesktopApp
             UpdateTotal();
             if (selectedShow == null) return;
             using var context = new AppDbContext();
-            var performances = await context.PerformanceInfos.FromSqlRaw($"CALL proc_performances_by_show({selectedShow.show_id})").ToListAsync();
+            // Gọi stored procedure với tham số thông qua FromSqlInterpolated để tránh SQL injection
+            var performances = await context.PerformanceInfos
+                                           .FromSqlInterpolated($"CALL proc_performances_by_show({selectedShow.show_id})")
+                                           .ToListAsync();
             PerformanceComboBox.ItemsSource = performances;
         }
 
@@ -82,16 +297,29 @@ namespace StageX_DesktopApp
         /// </summary>
         private async void PerformanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            selectedPerformance = PerformanceComboBox.SelectedItem as PerformanceInfo;
-            SelectedPerformanceText.Text = selectedPerformance != null ? $"Suất chiếu: {selectedPerformance.Display}" : string.Empty;
+            var perf = PerformanceComboBox.SelectedItem as PerformanceInfo;
+            // Thiết lập thông tin suất diễn được chọn
+            if (perf != null)
+            {
+                selectedPerformanceId = perf.performance_id;
+                selectedPerformancePrice = perf.price;
+                selectedPerformanceDisplay = perf.Display;
+            }
+            else
+            {
+                selectedPerformanceId = null;
+                selectedPerformancePrice = 0;
+                selectedPerformanceDisplay = string.Empty;
+            }
+            SelectedPerformanceText.Text = selectedPerformanceId != null ? $"Suất chiếu: {selectedPerformanceDisplay}" : string.Empty;
+            // Xóa ghế và bill cũ
             billSeats.Clear();
             seatList.Clear();
             BuildSeatMap();
             UpdateTotal();
-            if (selectedPerformance == null) return;
-            using var context = new AppDbContext();
-            seatList = await context.AvailableSeats.FromSqlRaw($"CALL proc_available_seats({selectedPerformance.performance_id})").ToListAsync();
-            BuildSeatMap();
+            if (selectedPerformanceId == null) return;
+            // Nạp sơ đồ ghế đầy đủ (kể cả ghế đã bán)
+            await LoadSeatsAsync(selectedPerformanceId.Value);
         }
 
         /// <summary>
@@ -136,16 +364,28 @@ namespace StageX_DesktopApp
                     Width = 35,
                     Height = 35,
                     Margin = new Thickness(2),
-                    // Màu nền theo hạng ghế; nếu không xác định thì dùng màu tối mặc định
-                    Background = new SolidColorBrush(
-                        categoryColors.TryGetValue(seat.category_name?.Trim() ?? string.Empty, out var col)
-                            ? col
-                            : System.Windows.Media.Color.FromRgb(30, 40, 60)),
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(1),
-                    BorderBrush = Brushes.Transparent,
-                    ToolTip = $"{seat.category_name}(+{seat.base_price:N0}đ)"
+                    BorderBrush = Brushes.Transparent
                 };
+                // Đặt nền và trạng thái tùy theo ghế đã bán hay chưa
+                if (seat.is_sold)
+                {
+                    // Ghế đã bán: tô xám và vô hiệu hóa
+                    btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 100));
+                    btn.IsEnabled = false;
+                    btn.ToolTip = "Ghế đã bán";
+                }
+                else
+                {
+                    // Ghế còn trống: màu theo hạng ghế
+                    btn.Background = new SolidColorBrush(
+                        categoryColors.TryGetValue(seat.category_name?.Trim() ?? string.Empty, out var col)
+                            ? col
+                            : System.Windows.Media.Color.FromRgb(30, 40, 60));
+                    btn.IsEnabled = true;
+                    btn.ToolTip = $"{seat.category_name}(+{seat.base_price:N0}đ)";
+                }
                 btn.Click += SeatButton_Click;
                 Grid.SetRow(btn, rowIndex);
                 Grid.SetColumn(btn, colIndex);
@@ -158,30 +398,49 @@ namespace StageX_DesktopApp
         /// </summary>
         private void SeatButton_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedShow == null || selectedPerformance == null) return;
+            // Không yêu cầu selectedShow; chỉ cần có suất đã chọn
+            if (selectedPerformanceId == null) return;
             if (sender is not Button btn) return;
-            if (btn.Tag is not AvailableSeat seat) return;
+            if (btn.Tag is not SeatStatus seat) return;
             var existing = billSeats.FirstOrDefault(x => x.seat_id == seat.seat_id);
             if (existing != null)
             {
+                // Ghế đang được chọn, bỏ chọn
                 billSeats.Remove(existing);
-                // Bỏ chọn: trả lại viền trong suốt
                 btn.BorderBrush = Brushes.Transparent;
                 btn.BorderThickness = new Thickness(1);
             }
             else
             {
+                // Ghế chưa chọn, thêm vào bill
                 billSeats.Add(new BillSeat
                 {
                     seat_id = seat.seat_id,
                     SeatLabel = seat.SeatLabel,
-                    Price = seat.base_price + selectedPerformance.price
+                    Price = seat.base_price + selectedPerformancePrice
                 });
-                // Chọn: tô viền nổi bật (giữ nguyên màu nền)
+                // Tô viền nổi bật
                 btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7));
                 btn.BorderThickness = new Thickness(2);
             }
             UpdateTotal();
+        }
+
+        /// <summary>
+        /// Xử lý sự kiện cuộn chuột trên ScrollViewer của sơ đồ ghế để phóng to/thu nhỏ. Khi cuộn lên sẽ tăng
+        /// độ zoom, cuộn xuống sẽ giảm. Giới hạn từ 0.5x tới 3x. Thiết lập LayoutTransform của SeatMapGrid.
+        /// </summary>
+        private void SeatScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // Điều chỉnh tỉ lệ zoom mỗi lần cuộn khoảng 10%
+            double factor = e.Delta > 0 ? 1.1 : 0.9;
+            seatScale *= factor;
+            // Giới hạn thu phóng
+            if (seatScale < 0.5) seatScale = 0.5;
+            if (seatScale > 3.0) seatScale = 3.0;
+            // Áp dụng scale cho lưới ghế
+            SeatMapGrid.LayoutTransform = new ScaleTransform(seatScale, seatScale);
+            e.Handled = true;
         }
 
         /// <summary>
@@ -207,6 +466,11 @@ namespace StageX_DesktopApp
             {
                 GenerateQrCode((int)total);
             }
+            else if (selectedPaymentMethod == "Chuyển khoản" && total <= 0)
+            {
+                // Khi không có tổng tiền, xoá mã QR cũ để tránh hiển thị sai
+                QrImage.Source = null;
+            }
         }
         private void GenerateQrCode(int amount)
         {
@@ -214,7 +478,7 @@ namespace StageX_DesktopApp
             string accountNo = "1010101010"; // Ví dụ: "123456789"
             string accountName = "NGUYEN VAN A"; // Ví dụ: "NGUYEN VAN A"
             int acqId = 970436; // Vietcombank/...
-            string addInfo = "Thanh toan ve kich"; // Nội dung chuyển khoản (có thể thay đổi)
+            string addInfo = $"Thanh toan ve kich STAGEX"; // Nội dung chuyển khoản (có thể thay đổi)
 
             var apiRequest = new APIRequest
             {
@@ -233,25 +497,36 @@ namespace StageX_DesktopApp
             request.AddHeader("Accept", "application/json");
             request.AddParameter("application/json", jsonRequest, ParameterType.RequestBody);
 
-            RestResponse response = client.Execute(request);
-            if (response.IsSuccessful)
+            try
             {
-                var dataResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
-                string base64 = dataResult.data.qrDataURL.Replace("data:image/png;base64,", "");
-                byte[] imageBytes = Convert.FromBase64String(base64);
-                using (var ms = new MemoryStream(imageBytes))
+                RestResponse response = client.Execute(request);
+                if (response != null && response.IsSuccessful)
                 {
-                    var bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmap.StreamSource = ms;
-                    bitmap.EndInit();
-                    QrImage.Source = bitmap;
+                    var dataResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
+                    string base64 = dataResult.data.qrDataURL.Replace("data:image/png;base64,", "");
+                    byte[] imageBytes = Convert.FromBase64String(base64);
+                    using (var ms = new MemoryStream(imageBytes))
+                    {
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.StreamSource = ms;
+                        bitmap.EndInit();
+                        QrImage.Source = bitmap;
+                    }
+                }
+                else
+                {
+                    // Không thể tạo QR do lỗi từ API hoặc không có mạng
+                    QrImage.Source = null;
+                    MessageBox.Show("Không thể tạo mã QR, vui lòng kiểm tra kết nối mạng.");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi tạo QR: " + response.ErrorMessage);
+                // Bắt mọi lỗi bất ngờ (ví dụ không tìm thấy host)
+                QrImage.Source = null;
+                MessageBox.Show("Không thể tạo mã QR: " + ex.Message);
             }
         }
 
@@ -259,15 +534,17 @@ namespace StageX_DesktopApp
         {
             if (sender is not Button btn) return;
 
-            // Reset màu tất cả buttons
-            CashButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 18, 32)); // Màu tối mặc định
-            BankButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 18, 32));
+            // Đặt lại BorderThickness của tất cả buttons về mặc định (1) và nền giữ nguyên màu tối
+            CashButton.BorderThickness = new Thickness(1);
+            BankButton.BorderThickness = new Thickness(1);
 
-            // Nổi bật button được click
-            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7)); // Màu vàng nổi bật
+            // Tô viền đậm cho button được chọn
+            btn.BorderThickness = new Thickness(3);
 
+            // Lưu lại phương thức thanh toán được chọn
             selectedPaymentMethod = btn.Content.ToString();
 
+            // Hiển thị panel tiền mặt hoặc QR tùy theo lựa chọn
             if (selectedPaymentMethod == "Tiền mặt")
             {
                 CashPanel.Visibility = Visibility.Visible;
@@ -293,12 +570,13 @@ namespace StageX_DesktopApp
         /// </summary>
         private async void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedShow == null)
+            // Khi không ở chế độ Giờ cao điểm thì cần chọn vở diễn
+            if (!isPeakMode && selectedShow == null)
             {
                 MessageBox.Show("Vui lòng chọn vở diễn.");
                 return;
             }
-            if (selectedPerformance == null)
+            if (selectedPerformanceId == null)
             {
                 MessageBox.Show("Vui lòng chọn suất chiếu.");
                 return;
@@ -322,8 +600,10 @@ namespace StageX_DesktopApp
             {
                 using var context = new AppDbContext();
                 int userId = AuthSession.CurrentUser?.UserId ?? 0;
-                // tạo đơn hàng POS
-                var results = await context.CreateBookingResults.FromSqlRaw($"CALL proc_create_booking_pos({userId}, {selectedPerformance.performance_id}, {total})").ToListAsync();
+                // tạo đơn hàng POS thông qua stored procedure, truyền tham số bằng FromSqlInterpolated để tránh lỗi SQL injection
+                var results = await context.CreateBookingResults
+                                            .FromSqlInterpolated($"CALL proc_create_booking_pos({userId}, {selectedPerformanceId}, {total})")
+                                            .ToListAsync();
                 int bookingId = results.FirstOrDefault()?.booking_id ?? 0;
                 if (bookingId <= 0)
                 {
@@ -331,12 +611,12 @@ namespace StageX_DesktopApp
                     return;
                 }
                 // tạo payment
-                await context.Database.ExecuteSqlRawAsync($"CALL proc_create_payment({bookingId}, {total}, 'Thành công', '', '{paymentMethod}')");
+                await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_create_payment({bookingId}, {total}, {"Thành công"}, {""}, {paymentMethod})");
                 // tạo vé cho từng ghế
                 foreach (var item in billSeats)
                 {
                     string code = Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-                    await context.Database.ExecuteSqlRawAsync($"CALL proc_create_ticket({bookingId}, {item.seat_id}, '{code}')");
+                    await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_create_ticket({bookingId}, {item.seat_id}, {code})");
                 }
                 MessageBox.Show("Đã lưu đơn hàng thành công!");
                 // refresh seats of current performance

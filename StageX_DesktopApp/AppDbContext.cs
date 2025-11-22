@@ -45,6 +45,11 @@ namespace StageX_DesktopApp
         // Kết quả trả về khi tạo booking qua stored procedure
         public DbSet<CreateBookingResult> CreateBookingResults { get; set; }
 
+        // Dữ liệu ghế kèm trạng thái (đã bán/chưa) cho trang bán vé
+        public DbSet<SeatStatus> SeatStatuses { get; set; }
+        // Dữ liệu top 3 suất diễn mở bán/đang diễn cho chế độ Giờ cao điểm
+        public DbSet<PeakPerformanceInfo> PeakPerformanceInfos { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>().ToTable("users");
@@ -107,7 +112,7 @@ namespace StageX_DesktopApp
                .HasForeignKey(b => b.PerformanceId);
 
             modelBuilder.Entity<Ticket>()
-            .HasOne(t => t.Seat) 
+            .HasOne(t => t.Seat)
             .WithMany()
             .HasForeignKey(t => t.SeatId);
 
@@ -123,6 +128,10 @@ namespace StageX_DesktopApp
             modelBuilder.Entity<PerformanceInfo>().HasNoKey().ToView(null);
             modelBuilder.Entity<AvailableSeat>().HasNoKey().ToView(null);
             modelBuilder.Entity<CreateBookingResult>().HasNoKey().ToView(null);
+
+            // Thực thể trạng thái ghế và top suất diễn không có khóa. Chỉ dùng để map dữ liệu từ stored procedure.
+            modelBuilder.Entity<SeatStatus>().HasNoKey().ToView(null);
+            modelBuilder.Entity<PeakPerformanceInfo>().HasNoKey().ToView(null);
 
             modelBuilder.Entity<Actor>().ToTable("actors");
             modelBuilder.Entity<Show>()
