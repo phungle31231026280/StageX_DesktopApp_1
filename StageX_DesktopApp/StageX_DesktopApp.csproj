@@ -21,6 +21,8 @@
     <PackageReference Include="PDFsharp" Version="6.2.3" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
+    <!-- Thêm tham chiếu tới MailKit để gửi email thông báo tài khoản mới -->
+    <PackageReference Include="MailKit" Version="4.2.0" />
   </ItemGroup>
 
 </Project>

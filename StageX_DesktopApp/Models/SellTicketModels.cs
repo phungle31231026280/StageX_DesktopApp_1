@@ -72,6 +72,13 @@ namespace StageX_DesktopApp.Models
         public decimal base_price { get; set; }
         public bool is_sold { get; set; }
 
+        /// <summary>
+        /// Mã màu hex cho hạng ghế. Thuộc tính này được trả về từ thủ tục
+        /// <c>proc_seats_with_status</c>. Giá trị thường là chuỗi 6 ký tự (ví dụ "0d6efd").
+        /// Nếu để trống hoặc null, mã sẽ được ánh xạ sang màu mặc định trong UI.
+        /// </summary>
+        public string? color_class { get; set; }
+
         // Tên ghế hiển thị (hàng + số)
         public string SeatLabel => $"{row_char}{seat_number}";
     }

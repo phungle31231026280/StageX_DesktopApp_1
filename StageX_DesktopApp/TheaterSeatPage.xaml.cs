@@ -412,14 +412,19 @@ namespace StageX_DesktopApp
                     {
                         using (var ctx = new AppDbContext())
                         {
-                            await ctx.Database.ExecuteSqlRawAsync("DELETE FROM seats WHERE theater_id={0}", t.TheaterId);
-                            ctx.Theaters.Remove(new Theater { TheaterId = t.TheaterId });
-                            await ctx.SaveChangesAsync();
+                            // GHI CHÚ: Sử dụng stored procedures thay cho truy vấn xoá trực tiếp.
+                            // Thủ tục proc_delete_seats_by_theater sẽ xoá các ghế thuộc rạp, thủ tục proc_delete_theater sẽ xoá rạp.
+                            await ctx.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_seats_by_theater({t.TheaterId})");
+                            await ctx.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_theater({t.TheaterId})");
                         }
+                        // Sau khi xoá, tải lại danh sách rạp và ẩn panel chỉnh sửa
                         await LoadTheatersAsync();
                         CancelEditButton_Click(null, null);
                     }
-                    catch (Exception ex) { MessageBox.Show("Lỗi xóa: " + ex.Message); }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Lỗi xoá: " + ex.Message);
+                    }
                 }
             }
         }

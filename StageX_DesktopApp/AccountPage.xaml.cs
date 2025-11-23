@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.EntityFrameworkCore; // <-- Dùng EF Core
+using MimeKit;                // Thư viện gửi mail
+using MailKit.Net.Smtp;       // MailKit SMTP client
+using MailKit.Security;
 
 namespace StageX_DesktopApp
 {
@@ -15,9 +18,66 @@ namespace StageX_DesktopApp
             InitializeComponent();
         }
 
+        #region SMTP cấu hình và gửi mail
+
+        /// <summary>
+        /// Cấu hình SMTP để gửi email thông báo tài khoản mới. Các giá trị này được
+        /// thiết lập dựa trên thông tin người dùng cung cấp. Bạn có thể thay đổi
+        /// chúng trong file mã nguồn hoặc trích xuất ra tệp cấu hình riêng.
+        /// </summary>
+        private static class SmtpSettings
+        {
+            public const string Host = "smtp.gmail.com";
+            public const int Port = 587;
+            // Tài khoản Gmail sử dụng để xác thực SMTP
+            public const string Username = "dtngoc.video@gmail.com";
+            // Mật khẩu ứng dụng (không có khoảng trắng) – bạn cần tạo mật khẩu ứng dụng trên Gmail
+            public const string Password = "yfdcojadkfblargt";
+            // Địa chỉ email và tên hiển thị khi gửi đi
+            public const string FromEmail = "no-reply@stagex.local";
+            public const string FromName = "StageX";
+        }
+
+        /// <summary>
+        /// Gửi email thông báo tài khoản mới cho nhân viên. Nội dung bao gồm tên tài khoản
+        /// và mật khẩu (chưa mã hoá). Sử dụng MailKit với giao thức TLS trên cổng 587.
+        /// Hàm này trả về true nếu gửi thành công, false nếu có lỗi.
+        /// </summary>
+        /// <param name="toEmail">Địa chỉ email của nhân viên</param>
+        /// <param name="accountName">Tên tài khoản</param>
+        /// <param name="plainPassword">Mật khẩu gốc (chưa hash)</param>
+        private static async Task<bool> SendNewAccountEmail(string toEmail, string accountName, string plainPassword)
+        {
+            try
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(SmtpSettings.FromName, SmtpSettings.FromEmail));
+                message.To.Add(new MailboxAddress(string.Empty, toEmail));
+                message.Subject = "Thông báo tài khoản mới";
+                message.Body = new TextPart("plain")
+                {
+                    Text = $"Bạn đã được StageX cung cấp tài khoản mới,\nTên tài khoản là: {accountName}\nMật khẩu là: {plainPassword}"
+                };
+
+                using var client = new SmtpClient();
+                await client.ConnectAsync(SmtpSettings.Host, SmtpSettings.Port, SecureSocketOptions.StartTls);
+                await client.AuthenticateAsync(SmtpSettings.Username, SmtpSettings.Password);
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
         private async void Page_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadAccountsAsync();
+            StatusComboBox.SelectedIndex = 0;
         }
 
         /// <summary>
@@ -29,11 +89,10 @@ namespace StageX_DesktopApp
             {
                 using (var context = new AppDbContext())
                 {
-                    // Logic giống proc_get_staff_users()
+                    // Gọi stored procedure để lấy danh sách tài khoản Admin và Nhân viên
                     var accounts = await context.Users
-                                               .Where(u => u.Role == "Admin" || u.Role == "Nhân viên")
-                                               .OrderBy(u => u.UserId)
-                                               .ToListAsync();
+                                                 .FromSqlRaw("CALL proc_get_admin_staff_users()")
+                                                 .ToListAsync();
                     AccountsGrid.ItemsSource = accounts;
                 }
             }
@@ -65,7 +124,13 @@ namespace StageX_DesktopApp
             EmailTextBox.Text = "";
             PasswordBox.Password = "";
             RoleComboBox.SelectedIndex = -1;
-            StatusComboBox.SelectedIndex = -1;
+            // Khi tạo tài khoản mới, mặc định trạng thái là "hoạt động" và không cho phép sửa
+            StatusComboBox.SelectedIndex = 0; // lựa chọn "hoạt động"
+            StatusComboBox.IsEnabled = false;
+
+            AccountNameTextBox.IsEnabled = true;
+            EmailTextBox.IsEnabled = true;
+            PasswordBox.IsEnabled = true;
 
             AccountsGrid.SelectedItem = null;
         }
@@ -83,11 +148,17 @@ namespace StageX_DesktopApp
                 AccountNameTextBox.Text = userToEdit.AccountName;
                 EmailTextBox.Text = userToEdit.Email;
 
-                PasswordBox.Password = ""; // Luôn xóa trống mật khẩu
+                //2. Không thể chỉnh sửa email, Tên tài khoản và mật khẩu
+                AccountNameTextBox.IsEnabled = false;
+                EmailTextBox.IsEnabled = false;
+                PasswordBox.IsEnabled = false;
 
                 // 2. Chọn đúng ComboBox
                 RoleComboBox.SelectedIndex = (userToEdit.Role == "Admin") ? 1 : 0;
                 StatusComboBox.SelectedIndex = (userToEdit.Status == "khóa") ? 1 : 0;
+
+                // Cho phép thay đổi trạng thái khi chỉnh sửa tài khoản
+                StatusComboBox.IsEnabled = true;
 
                 // 3. Đổi nút
                 SaveButton.Content = "Lưu thay đổi";
@@ -108,11 +179,17 @@ namespace StageX_DesktopApp
                 AccountNameTextBox.Text = userToEdit.AccountName;
                 EmailTextBox.Text = userToEdit.Email;
 
-                PasswordBox.Password = ""; // Luôn xóa trống mật khẩu
+                //2. Không thể chỉnh sửa email, Tên tài khoản và mật khẩu
+                AccountNameTextBox.IsEnabled = false;
+                EmailTextBox.IsEnabled = false;
+                PasswordBox.IsEnabled = false;
 
                 // 2. Chọn đúng ComboBox
                 RoleComboBox.SelectedIndex = (userToEdit.Role == "Admin") ? 1 : 0;
                 StatusComboBox.SelectedIndex = (userToEdit.Status == "khóa") ? 1 : 0;
+
+                // Cho phép thay đổi trạng thái khi chỉnh sửa tài khoản
+                StatusComboBox.IsEnabled = true;
 
                 // 3. Đổi nút
                 SaveButton.Content = "Lưu thay đổi";
@@ -166,9 +243,19 @@ namespace StageX_DesktopApp
                     // Logic THÊM MỚI (ADD)
                     else
                     {
+                        // Mặc định trạng thái của tài khoản mới là "hoạt động"
+                        status = "hoạt động";
+                        StatusComboBox.SelectedIndex = 0;
+
                         if (string.IsNullOrEmpty(password))
                         {
                             MessageBox.Show("Mật khẩu là bắt buộc khi thêm tài khoản mới!");
+                            return;
+                        }
+                        bool mailSent = await SendNewAccountEmail(email, accountName, password);
+                        if (!mailSent)
+                        {
+                            MessageBox.Show("Không thể gửi email xác thực. Dừng tạo tài khoản.");
                             return;
                         }
 
@@ -182,13 +269,22 @@ namespace StageX_DesktopApp
                             PasswordHash = newHash,
                             Role = role,
                             Status = status,
-                            IsVerified = true // Dòng này sẽ hết lỗi
+                            IsVerified = true
                         };
                         context.Users.Add(newUser);
                     }
 
                     await context.SaveChangesAsync();
-                    MessageBox.Show("Lưu tài khoản thành công!");
+                    // Hiển thị thông báo tuỳ theo ngữ cảnh: nếu có UserId thì là cập nhật, ngược lại là thêm mới
+                    int parsedId;
+                    if (int.TryParse(UserIdTextBox.Text, out parsedId) && parsedId > 0)
+                    {
+                        MessageBox.Show("Lưu tài khoản thành công!");
+                    }
+                    else
+                    {
+                        MessageBox.Show("Tạo tài khoản mới thành công!");
+                    }
                 }
 
                 // 5. Tải lại Bảng và Làm mới Form
@@ -198,10 +294,6 @@ namespace StageX_DesktopApp
             catch (DbUpdateException ex) // Bắt lỗi (ví dụ: Trùng Email)
             {
                 MessageBox.Show($"Lỗi khi lưu tài khoản: {ex.InnerException?.Message ?? ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Lỗi không xác định: {ex.Message}");
             }
         }
 

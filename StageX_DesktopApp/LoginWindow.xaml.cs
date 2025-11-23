@@ -40,6 +40,12 @@ namespace StageX_DesktopApp
                         LoginButton.IsEnabled = true;
                         return;
                     }
+                    if (user.Status != null && user.Status.Equals("khóa", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ErrorTextBlock.Text = "Tài khoản đã bị khóa";
+                        LoginButton.IsEnabled = true;
+                        return;
+                    }
 
                     bool isPasswordCorrect = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
                     if (!isPasswordCorrect)

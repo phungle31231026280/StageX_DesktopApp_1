@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 18, 2025 at 05:38 PM
+-- Generation Time: Nov 23, 2025 at 12:49 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -25,6 +25,16 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_active_shows` ()   BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+
+    -- Trả về các vở diễn đang chiếu (chỉ những vở có ít nhất một suất đang mở bán hoặc đang diễn)
+    SELECT show_id, title
+    FROM shows
+    WHERE status = 'Đang chiếu';
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_add_show_genre` (IN `in_show_id` INT, IN `in_genre_id` INT)   BEGIN
     INSERT INTO show_genres (show_id, genre_id)
     VALUES (in_show_id, in_genre_id);
@@ -34,6 +44,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_approve_theater` (IN `in_theat
     UPDATE theaters
     SET status = 'Đã hoạt động'
     WHERE theater_id = in_theater_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_available_seats` (IN `in_performance_id` INT)   BEGIN
+    SELECT s.seat_id,
+           s.row_char,
+           s.seat_number,
+           IFNULL(sc.category_name, '') AS category_name,
+           IFNULL(sc.base_price, 0)      AS base_price
+    FROM seats s
+    JOIN seat_performance sp ON sp.seat_id = s.seat_id
+    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
+    WHERE sp.performance_id = in_performance_id
+      AND sp.status = 'trống';
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_can_delete_seat_category` (IN `in_category_id` INT)   BEGIN
@@ -49,6 +72,51 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_can_delete_theater` (IN `in_th
     FROM performances
     WHERE theater_id = in_theater_id
       AND status = 'Đang mở bán';
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_chart_last_12_months` ()   BEGIN
+    SELECT 
+        DATE_FORMAT(b.created_at, '%m/%Y') as period,
+        COUNT(t.ticket_id) as sold_tickets
+    FROM bookings b
+    JOIN tickets t ON b.booking_id = t.booking_id
+    JOIN payments p ON b.booking_id = p.booking_id
+    WHERE p.status = 'Thành công'
+      AND b.created_at >= DATE_SUB(NOW(), INTERVAL 11 MONTH)
+    GROUP BY YEAR(b.created_at), MONTH(b.created_at)
+    ORDER BY b.created_at ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_chart_last_4_weeks` ()   BEGIN
+    SELECT 
+        CONCAT('Tuần ', WEEK(b.created_at, 1)) as period,
+        COUNT(t.ticket_id) as sold_tickets
+    FROM bookings b
+    JOIN tickets t ON b.booking_id = t.booking_id
+    JOIN payments p ON b.booking_id = p.booking_id
+    WHERE p.status = 'Thành công'
+      AND b.created_at >= DATE_SUB(NOW(), INTERVAL 4 WEEK)
+    GROUP BY YEAR(b.created_at), WEEK(b.created_at, 1)
+    ORDER BY b.created_at ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_chart_last_7_days` ()   BEGIN
+    SELECT 
+        DATE_FORMAT(b.created_at, '%d/%m') as period,
+        COUNT(t.ticket_id) as sold_tickets
+    FROM bookings b
+    JOIN tickets t ON b.booking_id = t.booking_id
+    JOIN payments p ON b.booking_id = p.booking_id
+    WHERE p.status = 'Thành công'
+      AND b.created_at >= DATE(NOW()) - INTERVAL 6 DAY
+    GROUP BY DATE(b.created_at)
+    ORDER BY b.created_at ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_check_user_exists` (IN `in_email` VARCHAR(255), IN `in_account_name` VARCHAR(255))   BEGIN
+    SELECT COUNT(*) AS exists_count
+    FROM users
+    WHERE email = in_email OR account_name = in_account_name;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_count_performances_by_show` (IN `in_show_id` INT)   BEGIN
@@ -129,112 +197,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_review` (IN `in_show_id
     SELECT LAST_INSERT_ID() AS review_id;
 END$$
 
---
--- =============================================================
---  Các thủ tục hỗ trợ trang Bán vé (Nhân viên)
---  Lưu ý: Những thủ tục này phục vụ cho việc hiển thị danh sách
---  vở diễn, suất chiếu và sơ đồ ghế trong ứng dụng desktop.
---  Nếu đã tồn tại thủ tục cùng tên, hãy cập nhật thay vì tạo mới.
--- =============================================================
-
--- Lấy danh sách vở diễn đang mở bán
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_active_shows`()  
-BEGIN
-    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
-    CALL proc_update_statuses();
-
-    -- Trả về các vở diễn đang chiếu (chỉ những vở có ít nhất một suất đang mở bán hoặc đang diễn)
-    SELECT show_id, title
-    FROM shows
-    WHERE status = 'Đang chiếu';
-END$$
-
--- Lấy danh sách suất chiếu theo vở diễn.
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_performances_by_show` (IN `in_show_id` INT)  
-BEGIN
-    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
-    CALL proc_update_statuses();
-
-    -- Trả về các suất chiếu thuộc vở diễn đang mở bán
-    SELECT performance_id,
-           performance_date,
-           start_time,
-           end_time,
-           price
-    FROM performances
-    WHERE show_id = in_show_id
-      AND status = 'Đang mở bán';
-END$$
-
--- Lấy danh sách ghế còn trống cho một suất chiếu.
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_available_seats` (IN `in_performance_id` INT)  
-BEGIN
-    SELECT s.seat_id,
-           s.row_char,
-           s.seat_number,
-           IFNULL(sc.category_name, '') AS category_name,
-           IFNULL(sc.base_price, 0)      AS base_price
-    FROM seats s
-    JOIN seat_performance sp ON sp.seat_id = s.seat_id
-    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
-    WHERE sp.performance_id = in_performance_id
-      AND sp.status = 'trống';
-END$$
-
--- ===================================================================
---  Thủ tục cập nhật trạng thái suất diễn và vở diễn
---  Gọi thủ tục này trước khi truy vấn danh sách vở diễn/suất diễn để
---  đảm bảo trạng thái được cập nhật đúng theo ngày giờ hiện tại.
---
---  Quy tắc cập nhật:
---    * Suất diễn có thời gian kết thúc (performance_date + end_time) < NOW()  => 'Đã kết thúc'
---    * Suất diễn đang diễn ra (đã bắt đầu nhưng chưa kết thúc)           => 'Đang diễn'
---    * Còn lại                                                         => 'Đang mở bán'
---    * Vở diễn có ít nhất một suất đang mở bán/đang diễn               => 'Đang chiếu'
---      Ngược lại nếu tất cả suất đã kết thúc                           => 'Đã kết thúc'
---      (trường hợp khác giữ nguyên, ví dụ 'Sắp chiếu')
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_statuses`()  
-BEGIN
-    -- Cập nhật trạng thái cho bảng performances
-    UPDATE performances
-    SET status =
-        CASE
-            -- Nếu thời gian kết thúc < thời gian hiện tại thì đã kết thúc
-            WHEN (
-                CONCAT(performance_date, ' ', COALESCE(end_time, start_time)) < NOW()
-            ) THEN 'Đã kết thúc'
-            -- Nếu đã bắt đầu nhưng chưa kết thúc => đang diễn
-            WHEN (
-                CONCAT(performance_date, ' ', start_time) <= NOW() AND
-                (
-                    end_time IS NULL OR CONCAT(performance_date, ' ', end_time) >= NOW()
-                )
-            ) THEN 'Đang diễn'
-            -- Còn lại là đang mở bán
-            ELSE 'Đang mở bán'
-        END;
-
-    -- Cập nhật trạng thái cho bảng shows
-    UPDATE shows s
-    SET s.status = (
-        CASE
-            -- Nếu có ít nhất một suất đang mở bán hoặc đang diễn => Đang chiếu
-            WHEN EXISTS (
-                SELECT 1 FROM performances p
-                WHERE p.show_id = s.show_id
-                  AND p.status IN ('Đang mở bán', 'Đang diễn')
-            ) THEN 'Đang chiếu'
-            -- Nếu tất cả các suất đều đã kết thúc => Đã kết thúc
-            WHEN NOT EXISTS (
-                SELECT 1 FROM performances p
-                WHERE p.show_id = s.show_id AND p.status <> 'Đã kết thúc'
-            ) THEN 'Đã kết thúc'
-            ELSE s.status
-        END
-    );
-END$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_seat_category` (IN `in_name` VARCHAR(100), IN `in_base_price` DECIMAL(10,3), IN `in_color_class` VARCHAR(50))   BEGIN
     INSERT INTO seat_categories (category_name, base_price, color_class)
     VALUES (in_name, in_base_price, in_color_class);
@@ -297,6 +259,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_user` (IN `in_email` VA
     SELECT LAST_INSERT_ID() AS user_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_dashboard_summary` ()   BEGIN
+    SELECT 
+        (SELECT COALESCE(SUM(total_amount), 0) FROM bookings b JOIN payments p ON b.booking_id = p.booking_id WHERE p.status = 'Thành công') as total_revenue,
+        (SELECT COUNT(*) FROM bookings) as total_bookings,
+        (SELECT COUNT(*) FROM shows) as total_shows,
+        (SELECT COUNT(*) FROM genres) as total_genres;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_actor` (IN `in_actor_id` INT)   BEGIN
+    DELETE FROM actors WHERE actor_id = in_actor_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_genre` (IN `in_id` INT)   BEGIN
     DELETE FROM genres WHERE genre_id = in_id;
 END$$
@@ -308,6 +282,10 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_review` (IN `in_review_id` INT)   BEGIN
     DELETE FROM reviews WHERE review_id = in_review_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_seats_by_theater` (IN `in_theater_id` INT)   BEGIN
+    DELETE FROM seats WHERE theater_id = in_theater_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_seat_category` (IN `in_category_id` INT)   BEGIN
@@ -357,6 +335,23 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_expire_pending_payments` ()   
     WHERE p3.status = 'Thất bại'
       AND TIMESTAMPDIFF(MINUTE, p3.created_at, NOW()) >= 15
       AND sp.performance_id = b2.performance_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_actors` (IN `in_keyword` VARCHAR(255))   BEGIN
+    SELECT actor_id, full_name, nick_name, avatar_url, status
+    FROM actors
+    WHERE in_keyword IS NULL
+          OR in_keyword = ''
+          OR full_name LIKE CONCAT('%', in_keyword, '%')
+          OR nick_name LIKE CONCAT('%', in_keyword, '%')
+    ORDER BY actor_id DESC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_admin_staff_users` ()   BEGIN
+    SELECT *
+    FROM users
+    WHERE user_type IN ('Nhân viên','Admin')
+    ORDER BY user_id ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_all_bookings` ()   BEGIN
@@ -514,6 +509,12 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_seats_for_theater` (IN `in
     ORDER BY s.row_char, s.seat_number;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_seat_categories` ()   BEGIN
+    SELECT category_id, category_name, base_price, color_class
+    FROM seat_categories
+    ORDER BY category_id ASC;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_seat_category_by_id` (IN `in_category_id` INT)   BEGIN
     SELECT * FROM seat_categories WHERE category_id = in_category_id LIMIT 1;
 END$$
@@ -560,6 +561,12 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_get_user_detail_by_id` (IN `in_user_id` INT)   BEGIN
     SELECT * FROM user_detail WHERE user_id = in_user_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_insert_actor` (IN `in_full_name` VARCHAR(255), IN `in_nick_name` VARCHAR(255), IN `in_avatar_url` VARCHAR(255), IN `in_status` VARCHAR(50))   BEGIN
+    INSERT INTO actors (full_name, nick_name, avatar_url, status, created_at)
+    VALUES (in_full_name, in_nick_name, in_avatar_url, in_status, NOW());
+    SELECT LAST_INSERT_ID() AS actor_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_modify_theater_size` (IN `in_theater_id` INT, IN `in_add_rows` INT, IN `in_add_cols` INT)   BEGIN
@@ -619,11 +626,173 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_modify_theater_size` (IN `in_t
     CALL proc_update_theater_seat_counts();
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_performances_by_show` (IN `in_show_id` INT)   BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+
+    -- Trả về các suất chiếu thuộc vở diễn đang mở bán
+    SELECT performance_id,
+           performance_date,
+           start_time,
+           end_time,
+           price
+    FROM performances
+    WHERE show_id = in_show_id
+      AND status = 'Đang mở bán';
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_rating_distribution` ()   BEGIN
+    SELECT rating as star, COUNT(*) as rating_count
+    FROM reviews
+    GROUP BY rating
+    ORDER BY rating;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_revenue_monthly` ()   BEGIN
+    SELECT 
+        DATE_FORMAT(b.created_at, '%m/%Y') as month, 
+        COALESCE(SUM(b.total_amount), 0) as total_revenue
+    FROM bookings b
+    JOIN payments p ON b.booking_id = p.booking_id
+    WHERE p.status = 'Thành công'
+    GROUP BY YEAR(b.created_at), MONTH(b.created_at)
+    ORDER BY b.created_at ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_seats_with_status` (IN `in_performance_id` INT)   BEGIN
+    /*
+      Trả về danh sách ghế và trạng thái bán cho một suất diễn.
+      GHI CHÚ: Bổ sung trường color_class để phía ứng dụng có thể tự tạo màu ghế.
+      Thứ tự và alias của các cột phải khớp với lớp SeatStatus trong mã nguồn.
+    */
+    SELECT s.seat_id                    AS seat_id,
+           s.row_char                   AS row_char,
+           s.seat_number                AS seat_number,
+           IFNULL(sc.category_name, '') AS category_name,
+           IFNULL(sc.base_price, 0)     AS base_price,
+           (sp.status <> 'trống')       AS is_sold,
+           sc.color_class               AS color_class
+    FROM seats s
+    JOIN seat_performance sp ON sp.seat_id = s.seat_id
+    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
+    WHERE sp.performance_id = in_performance_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_set_user_otp` (IN `in_user_id` INT, IN `in_otp_code` VARCHAR(10), IN `in_expires` DATETIME)   BEGIN
     UPDATE users
     SET otp_code = in_otp_code,
         otp_expires_at = in_expires
     WHERE user_id = in_user_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_daily` ()   BEGIN
+    /*
+      Trả về danh sách số lượng vé đã bán theo từng ngày.
+      Vé được coi là đã bán khi status nằm trong ('Hợp lệ','Đã sử dụng').
+    */
+    SELECT DATE_FORMAT(t.created_at, '%Y-%m-%d') AS period,
+           COUNT(*) AS sold_tickets
+    FROM tickets t
+    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
+    GROUP BY DATE_FORMAT(t.created_at, '%Y-%m-%d')
+    ORDER BY DATE_FORMAT(t.created_at, '%Y-%m-%d');
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_monthly` ()   BEGIN
+    /*
+      Trả về số lượng vé bán cho mỗi tháng (yyyy-mm).
+    */
+    SELECT DATE_FORMAT(t.created_at, '%Y-%m') AS period,
+           COUNT(*) AS sold_tickets
+    FROM tickets t
+    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
+    GROUP BY DATE_FORMAT(t.created_at, '%Y-%m')
+    ORDER BY DATE_FORMAT(t.created_at, '%Y-%m');
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_weekly` ()   BEGIN
+    /*
+      Trả về số lượng vé bán cho mỗi tuần ISO (năm và số tuần).
+      period trả về dạng YEARWEEK ISO.
+    */
+    SELECT CONVERT(YEARWEEK(t.created_at, 3), CHAR) AS period,
+           COUNT(*) AS sold_tickets
+    FROM tickets t
+    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
+    GROUP BY YEARWEEK(t.created_at, 3)
+    ORDER BY YEARWEEK(t.created_at, 3);
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_yearly` ()   BEGIN
+    /*
+      Trả về số lượng vé bán cho mỗi năm.
+    */
+    SELECT CONVERT(YEAR(t.created_at), CHAR) AS period,
+           COUNT(*) AS sold_tickets
+    FROM tickets t
+    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
+    GROUP BY YEAR(t.created_at)
+    ORDER BY YEAR(t.created_at);
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances` ()   BEGIN
+    -- Cập nhật trạng thái suất diễn và vở diễn để đảm bảo dữ liệu chính xác
+    CALL proc_update_statuses();
+    -- Lấy các suất đang mở bán hoặc đang diễn, sắp xếp tăng dần theo ngày giờ bắt đầu, giới hạn 3 suất
+    SELECT performance_id,
+           performance_date,
+           start_time,
+           end_time,
+           price
+    FROM performances
+    WHERE status IN ('Đang mở bán','Đang diễn')
+    ORDER BY CONCAT(performance_date, ' ', start_time) ASC
+    LIMIT 3;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances_extended` ()   BEGIN
+    -- Cập nhật trạng thái trước khi lấy dữ liệu
+    CALL proc_update_statuses();
+    -- Lấy top 3 suất diễn sớm nhất đang mở bán hoặc đang diễn, kèm thông tin vở diễn và số vé đã bán
+    SELECT p.performance_id,
+           s.title AS show_title,
+           p.performance_date,
+           p.start_time,
+           p.end_time,
+           p.price,
+           SUM(sp.status <> 'trống') AS sold_count,
+           COUNT(sp.seat_id)         AS total_count
+    FROM performances p
+    JOIN shows s ON s.show_id = p.show_id
+    JOIN seat_performance sp ON sp.performance_id = p.performance_id
+    WHERE p.status IN ('Đang mở bán','Đang diễn')
+    GROUP BY p.performance_id
+    ORDER BY CONCAT(p.performance_date, ' ', p.start_time) ASC
+    LIMIT 3;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top5_shows_by_tickets` ()   BEGIN
+    SELECT 
+        s.title as show_name, 
+        COUNT(t.ticket_id) as sold_tickets
+    FROM shows s
+    JOIN performances p ON s.show_id = p.show_id
+    JOIN bookings b ON p.performance_id = b.performance_id
+    JOIN tickets t ON b.booking_id = t.booking_id
+    JOIN payments pay ON b.booking_id = pay.booking_id
+    WHERE pay.status = 'Thành công'
+    GROUP BY s.show_id
+    ORDER BY sold_tickets DESC
+    LIMIT 5;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_actor` (IN `in_actor_id` INT, IN `in_full_name` VARCHAR(255), IN `in_nick_name` VARCHAR(255), IN `in_avatar_url` VARCHAR(255), IN `in_status` VARCHAR(50))   BEGIN
+    UPDATE actors
+    SET full_name = in_full_name,
+        nick_name = in_nick_name,
+        avatar_url = in_avatar_url,
+        status = in_status
+    WHERE actor_id = in_actor_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_booking_status` (IN `in_booking_id` INT, IN `in_booking_status` VARCHAR(20))   BEGIN
@@ -751,6 +920,46 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_staff_user` (IN `in_use
     WHERE user_id = in_user_id AND user_type = 'Nhân viên';
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_statuses` ()   BEGIN
+    -- Cập nhật trạng thái cho bảng performances
+    UPDATE performances
+    SET status =
+        CASE
+            -- Nếu thời gian kết thúc < thời gian hiện tại thì đã kết thúc
+            WHEN (
+                CONCAT(performance_date, ' ', COALESCE(end_time, start_time)) < NOW()
+            ) THEN 'Đã kết thúc'
+            -- Nếu đã bắt đầu nhưng chưa kết thúc => đang diễn
+            WHEN (
+                CONCAT(performance_date, ' ', start_time) <= NOW() AND
+                (
+                    end_time IS NULL OR CONCAT(performance_date, ' ', end_time) >= NOW()
+                )
+            ) THEN 'Đang diễn'
+            -- Còn lại là đang mở bán
+            ELSE 'Đang mở bán'
+        END;
+
+    -- Cập nhật trạng thái cho bảng shows
+    UPDATE shows s
+    SET s.status = (
+        CASE
+            -- Nếu có ít nhất một suất đang mở bán hoặc đang diễn => Đang chiếu
+            WHEN EXISTS (
+                SELECT 1 FROM performances p
+                WHERE p.show_id = s.show_id
+                  AND p.status IN ('Đang mở bán', 'Đang diễn')
+            ) THEN 'Đang chiếu'
+            -- Nếu tất cả các suất đều đã kết thúc => Đã kết thúc
+            WHEN NOT EXISTS (
+                SELECT 1 FROM performances p
+                WHERE p.show_id = s.show_id AND p.status <> 'Đã kết thúc'
+            ) THEN 'Đã kết thúc'
+            ELSE s.status
+        END
+    );
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_theater` (IN `in_theater_id` INT, IN `in_name` VARCHAR(255))   BEGIN
     UPDATE theaters
     SET name = in_name
@@ -780,90 +989,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_unverified_user_passwor
     SET password = in_password,
         account_name = in_account_name
     WHERE user_id = in_user_id;
-END$$
-
---
--- Thủ tục mới: xóa tất cả ghế của một rạp theo theater_id.
---  Được sử dụng trong ứng dụng để thay thế câu truy vấn trực tiếp DELETE FROM seats WHERE theater_id = ...
---  Tham số:
---      in_theater_id INT: mã rạp cần xóa ghế.
---  Chức năng:
---      Xóa toàn bộ các bản ghi trong bảng seats thuộc rạp này.
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_delete_seats_by_theater` (IN `in_theater_id` INT)
-BEGIN
-    DELETE FROM seats WHERE theater_id = in_theater_id;
-END$$
-
---
--- Thủ tục mới: trả về tất cả ghế của một suất diễn cùng trạng thái đã đặt/chưa.
---  Thay vì chỉ lấy ghế còn trống, thủ tục này giúp vẽ sơ đồ đầy đủ và đánh dấu ghế đã bán.
---  Tham số:
---      in_performance_id INT: mã suất diễn cần lấy ghế
---  Kết quả:
---      seat_id, row_char, seat_number, category_name, base_price, is_sold (0/1)
---  Trong đó is_sold = 1 nếu seat_performance.status <> 'trống'.
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_seats_with_status` (IN `in_performance_id` INT)
-BEGIN
-    SELECT s.seat_id,
-           s.row_char,
-           s.seat_number,
-           IFNULL(sc.category_name, '') AS category_name,
-           IFNULL(sc.base_price, 0)     AS base_price,
-           (sp.status <> 'trống')       AS is_sold
-    FROM seats s
-    JOIN seat_performance sp ON sp.seat_id = s.seat_id
-    LEFT JOIN seat_categories sc ON sc.category_id = s.category_id
-    WHERE sp.performance_id = in_performance_id;
-END$$
-
---
--- Thủ tục mới: lấy TOP 3 suất diễn gần nhất kèm theo thông tin tên vở, số ghế đã bán và tổng số ghế.
---  Phục vụ chế độ "Giờ cao điểm" của trang bán vé. Cho phép xác định những suất sắp diễn và tình trạng
---  còn vé để vô hiệu hóa nút khi đã bán hết. Nếu đã tồn tại thủ tục cùng tên, vui lòng cập nhật.
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances_extended` ()
-BEGIN
-    -- Cập nhật trạng thái trước khi lấy dữ liệu
-    CALL proc_update_statuses();
-    -- Lấy top 3 suất diễn sớm nhất đang mở bán hoặc đang diễn, kèm thông tin vở diễn và số vé đã bán
-    SELECT p.performance_id,
-           s.title AS show_title,
-           p.performance_date,
-           p.start_time,
-           p.end_time,
-           p.price,
-           SUM(sp.status <> 'trống') AS sold_count,
-           COUNT(sp.seat_id)         AS total_count
-    FROM performances p
-    JOIN shows s ON s.show_id = p.show_id
-    JOIN seat_performance sp ON sp.performance_id = p.performance_id
-    WHERE p.status IN ('Đang mở bán','Đang diễn')
-    GROUP BY p.performance_id
-    ORDER BY CONCAT(p.performance_date, ' ', p.start_time) ASC
-    LIMIT 3;
-END$$
-
---
--- Thủ tục mới: lấy TOP 3 suất diễn gần nhất (còn đang mở bán hoặc đang diễn).
---  Thủ tục này phục vụ chế độ "Giờ cao điểm" của trang bán vé dành cho nhân viên.
---  Nó sẽ cập nhật lại trạng thái suất diễn/vở diễn trước khi lấy dữ liệu và sắp xếp theo thời gian sớm nhất.
---  Chỉ trả về 3 suất diễn có thời gian gần nhất, bao gồm: performance_id, performance_date, start_time, end_time, price.
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top3_nearest_performances` ()
-BEGIN
-    -- Cập nhật trạng thái suất diễn và vở diễn để đảm bảo dữ liệu chính xác
-    CALL proc_update_statuses();
-    -- Lấy các suất đang mở bán hoặc đang diễn, sắp xếp tăng dần theo ngày giờ bắt đầu, giới hạn 3 suất
-    SELECT performance_id,
-           performance_date,
-           start_time,
-           end_time,
-           price
-    FROM performances
-    WHERE status IN ('Đang mở bán','Đang diễn')
-    ORDER BY CONCAT(performance_date, ' ', start_time) ASC
-    LIMIT 3;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_update_user_password` (IN `in_user_id` INT, IN `in_password` VARCHAR(255))   BEGIN
@@ -903,147 +1028,40 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_verify_user_otp` (IN `in_user_
     SELECT v AS verified;
 END$$
 
--- -----------------------------------------------------------------------
---  Các thủ tục hỗ trợ trang bảng điều khiển cho ứng dụng desktop
---
---  Ghi chú (bằng tiếng Việt): Những thủ tục này được thêm nhằm tổng hợp dữ liệu
---  để hiển thị trên màn hình bảng điều khiển của ứng dụng quản trị. Việc
---  tính toán thống kê được thực hiện hoàn toàn trong cơ sở dữ liệu, tránh
---  việc truy vấn trực tiếp bằng C#. Các thủ tục này trả về dữ liệu dạng
---  bảng để ứng dụng WPF sử dụng.
-
--- Tổng hợp số liệu chính: doanh thu, số đơn hàng hoàn thành, số vở diễn và số thể loại
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_dashboard_summary`()  
-BEGIN
-    /*
-      Trả về một hàng gồm:
-        - total_revenue: tổng doanh thu (sum của cột amount trong bảng payments với status 'Thành công')
-        - total_bookings: tổng số đơn đặt vé đã hoàn thành
-        - total_shows: tổng số vở diễn trong hệ thống
-        - total_genres: tổng số thể loại vở diễn
-    */
-    SELECT
-        IFNULL((SELECT SUM(p.amount) FROM payments p WHERE p.status = 'Thành công'), 0) AS total_revenue,
-        (SELECT COUNT(*) FROM bookings b WHERE b.booking_status = 'Đã hoàn thành') AS total_bookings,
-        (SELECT COUNT(*) FROM shows s) AS total_shows,
-        (SELECT COUNT(*) FROM genres g) AS total_genres;
-END$$
-
--- Doanh thu theo tháng. Kết quả gồm 2 cột: month (yyyy-mm) và total_revenue
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_revenue_monthly`()  
-BEGIN
-    /*
-      Tổng hợp doanh thu theo từng tháng dựa trên ngày tạo của khoản thanh toán.
-      Chỉ tính các khoản có status = 'Thành công'.
-    */
-    SELECT DATE_FORMAT(p.created_at, '%Y-%m') AS month,
-           SUM(p.amount) AS total_revenue
-    FROM payments p
-    WHERE p.status = 'Thành công'
-    GROUP BY DATE_FORMAT(p.created_at, '%Y-%m')
-    ORDER BY DATE_FORMAT(p.created_at, '%Y-%m');
-END$$
-
--- Số lượng vé bán theo ngày
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_daily`()  
-BEGIN
-    /*
-      Trả về danh sách số lượng vé đã bán theo từng ngày.
-      Vé được coi là đã bán khi status nằm trong ('Hợp lệ','Đã sử dụng').
-    */
-    SELECT DATE_FORMAT(t.created_at, '%Y-%m-%d') AS period,
-           COUNT(*) AS sold_tickets
-    FROM tickets t
-    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
-    GROUP BY DATE_FORMAT(t.created_at, '%Y-%m-%d')
-    ORDER BY DATE_FORMAT(t.created_at, '%Y-%m-%d');
-END$$
-
--- Số lượng vé bán theo tuần (ISO week)
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_weekly`()  
-BEGIN
-    /*
-      Trả về số lượng vé bán cho mỗi tuần ISO (năm và số tuần).
-      period trả về dạng YEARWEEK ISO.
-    */
-    SELECT CONVERT(YEARWEEK(t.created_at, 3), CHAR) AS period,
-           COUNT(*) AS sold_tickets
-    FROM tickets t
-    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
-    GROUP BY YEARWEEK(t.created_at, 3)
-    ORDER BY YEARWEEK(t.created_at, 3);
-END$$
-
--- Số lượng vé bán theo tháng
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_monthly`()  
-BEGIN
-    /*
-      Trả về số lượng vé bán cho mỗi tháng (yyyy-mm).
-    */
-    SELECT DATE_FORMAT(t.created_at, '%Y-%m') AS period,
-           COUNT(*) AS sold_tickets
-    FROM tickets t
-    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
-    GROUP BY DATE_FORMAT(t.created_at, '%Y-%m')
-    ORDER BY DATE_FORMAT(t.created_at, '%Y-%m');
-END$$
-
--- Số lượng vé bán theo năm
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_sold_tickets_yearly`()  
-BEGIN
-    /*
-      Trả về số lượng vé bán cho mỗi năm.
-    */
-    SELECT CONVERT(YEAR(t.created_at), CHAR) AS period,
-           COUNT(*) AS sold_tickets
-    FROM tickets t
-    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
-    GROUP BY YEAR(t.created_at)
-    ORDER BY YEAR(t.created_at);
-END$$
-
--- Top 5 vở diễn có số vé bán nhiều nhất
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_top5_shows_by_tickets`()  
-BEGIN
-    /*
-      Tính toán số lượng vé bán cho từng vở diễn và trả về 5 vở diễn có doanh số cao nhất.
-      Vé được tính nếu status nằm trong ('Hợp lệ','Đã sử dụng').
-    */
-    SELECT s.title AS show_name,
-           COUNT(t.ticket_id) AS sold_tickets
-    FROM tickets t
-    JOIN bookings b ON t.booking_id = b.booking_id
-    JOIN performances p ON b.performance_id = p.performance_id
-    JOIN shows s ON p.show_id = s.show_id
-    WHERE t.status IN ('Hợp lệ','Đã sử dụng')
-    GROUP BY s.show_id, s.title
-    ORDER BY sold_tickets DESC
-    LIMIT 5;
-END$$
-
--- Phân bố đánh giá theo sao (1-5). Thủ tục này trả về số lượng đánh giá cho mỗi sao.
--- Nếu mức sao không tồn tại trong bảng reviews thì count = 0.
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_rating_distribution`()  
-BEGIN
-    /*
-      Trả về hai cột:
-        - star: số sao (từ 1 tới 5)
-        - rating_count: số lượng đánh giá tương ứng
-    */
-    SELECT s.star,
-           COALESCE(r.cnt, 0) AS rating_count
-    FROM (
-        SELECT 1 AS star UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
-    ) s
-    LEFT JOIN (
-        SELECT rating, COUNT(*) AS cnt
-        FROM reviews
-        GROUP BY rating
-    ) r ON s.star = r.rating;
-END$$
-
-
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `actors`
+--
+
+CREATE TABLE `actors` (
+  `actor_id` int(11) NOT NULL,
+  `full_name` varchar(255) NOT NULL,
+  `nick_name` varchar(255) DEFAULT NULL,
+  `avatar_url` varchar(500) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `status` enum('Hoạt động','Ngừng hoạt động') NOT NULL DEFAULT 'Hoạt động',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Dumping data for table `actors`
+--
+
+INSERT INTO `actors` (`actor_id`, `full_name`, `nick_name`, `avatar_url`, `email`, `phone`, `status`, `created_at`) VALUES
+(1, 'Thành Lộc', 'Phù thủy sân khấu', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(2, 'Hữu Châu', NULL, NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(3, 'Hồng Vân', 'NSND Hồng Vân', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(4, 'Hoài Linh', 'Sáu Bảnh', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(5, 'Trấn Thành', 'A Xìn', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(6, 'Thu Trang', 'Hoa hậu hài', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(7, 'Tiến Luật', NULL, NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(8, 'Diệu Nhi', NULL, NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(9, 'Minh Dự', 'Thánh chửi', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58'),
+(10, 'Hải Triều', 'Lụa', NULL, NULL, NULL, 'Hoạt động', '2025-11-22 14:30:58');
 
 -- --------------------------------------------------------
 
@@ -1059,67 +1077,6 @@ CREATE TABLE `bookings` (
   `booking_status` enum('Đang xử lý','Đã hoàn thành','Đã hủy') NOT NULL DEFAULT 'Đang xử lý',
   `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Dumping data for table `bookings`
---
-
-INSERT INTO `bookings` (`booking_id`, `user_id`, `performance_id`, `total_amount`, `booking_status`, `created_at`) VALUES
-(29, 4, 16, 660000.000, 'Đã hoàn thành', '2025-08-26 21:06:55'),
-(31, 3, 32, 545000.000, 'Đã hoàn thành', '2025-10-22 17:30:20'),
-(32, 3, 16, 660000.000, 'Đã hoàn thành', '2025-09-24 11:08:10'),
-(33, 2, 25, 510000.000, 'Đã hoàn thành', '2025-08-01 03:53:33'),
-(34, 4, 28, 550000.000, 'Đã hoàn thành', '2025-08-07 18:49:30'),
-(35, 4, 15, 435000.000, 'Đã hoàn thành', '2025-08-10 21:45:46'),
-(36, 2, 16, 660000.000, 'Đã hoàn thành', '2025-10-16 17:00:02'),
-(37, 4, 15, 585000.000, 'Đã hoàn thành', '2025-08-26 18:14:39'),
-(38, 3, 30, 550000.000, 'Đã hoàn thành', '2025-09-03 08:19:29'),
-(39, 2, 31, 515000.000, 'Đã hoàn thành', '2025-10-19 17:42:09'),
-(40, 3, 34, 415000.000, 'Đã hoàn thành', '2025-08-02 05:14:21'),
-(41, 4, 27, 340000.000, 'Đã hoàn thành', '2025-10-06 11:47:10'),
-(42, 4, 32, 320000.000, 'Đã hoàn thành', '2025-09-20 13:06:24'),
-(45, 2, 30, 550000.000, 'Đã hoàn thành', '2025-09-02 12:22:29'),
-(47, 3, 29, 515000.000, 'Đã hoàn thành', '2025-08-02 14:00:03'),
-(48, 3, 21, 450000.000, 'Đã hoàn thành', '2025-08-02 05:53:38'),
-(50, 2, 24, 340000.000, 'Đã hoàn thành', '2025-09-22 20:00:29'),
-(51, 4, 30, 700000.000, 'Đã hoàn thành', '2025-09-06 18:10:44'),
-(52, 2, 29, 740000.000, 'Đã hoàn thành', '2025-09-14 07:21:00'),
-(53, 3, 21, 600000.000, 'Đã hoàn thành', '2025-10-06 12:05:14'),
-(54, 4, 23, 415000.000, 'Đã hoàn thành', '2025-08-01 00:49:40'),
-(55, 3, 18, 510000.000, 'Đã hoàn thành', '2025-10-08 15:33:06'),
-(57, 4, 32, 545000.000, 'Đã hoàn thành', '2025-08-03 19:53:37'),
-(59, 3, 32, 470000.000, 'Đã hoàn thành', '2025-08-03 07:26:23'),
-(60, 4, 35, 470000.000, 'Đã hoàn thành', '2025-08-07 05:42:18'),
-(61, 2, 19, 450000.000, 'Đã hoàn thành', '2025-10-12 05:54:40'),
-(62, 4, 17, 550000.000, 'Đã hoàn thành', '2025-09-22 04:33:01'),
-(63, 3, 24, 490000.000, 'Đã hoàn thành', '2025-10-15 08:31:15'),
-(64, 3, 27, 640000.000, 'Đã hoàn thành', '2025-09-20 04:56:18'),
-(65, 4, 18, 510000.000, 'Đã hoàn thành', '2025-09-11 23:03:27'),
-(67, 4, 29, 665000.000, 'Đã hoàn thành', '2025-10-16 19:25:04'),
-(68, 3, 15, 510000.000, 'Đã hoàn thành', '2025-10-24 14:29:48'),
-(69, 2, 31, 515000.000, 'Đã hoàn thành', '2025-09-03 08:34:41'),
-(70, 3, 31, 590000.000, 'Đã hoàn thành', '2025-08-22 20:03:53'),
-(71, 3, 33, 545000.000, 'Đã hoàn thành', '2025-10-30 06:37:41'),
-(72, 3, 31, 740000.000, 'Đã hoàn thành', '2025-08-26 16:26:34'),
-(76, 2, 25, 585000.000, 'Đã hoàn thành', '2025-10-30 05:35:56'),
-(77, 4, 32, 470000.000, 'Đã hoàn thành', '2025-09-17 19:06:42'),
-(78, 4, 27, 640000.000, 'Đã hoàn thành', '2025-09-03 01:28:23'),
-(79, 2, 27, 415000.000, 'Đã hoàn thành', '2025-09-29 04:49:21'),
-(80, 3, 35, 545000.000, 'Đã hoàn thành', '2025-10-07 13:17:23'),
-(82, 3, 29, 515000.000, 'Đã hoàn thành', '2025-09-04 19:45:46'),
-(83, 2, 21, 375000.000, 'Đã hoàn thành', '2025-10-19 15:51:09'),
-(85, 3, 28, 475000.000, 'Đã hoàn thành', '2025-10-20 12:32:36'),
-(86, 4, 20, 320000.000, 'Đã hoàn thành', '2025-09-05 18:42:26'),
-(87, 3, 17, 625000.000, 'Đã hoàn thành', '2025-09-18 19:40:40'),
-(88, 4, 34, 640000.000, 'Đã hoàn thành', '2025-08-06 00:14:45'),
-(90, 2, 33, 395000.000, 'Đã hoàn thành', '2025-10-02 19:14:12'),
-(91, 4, 29, 590000.000, 'Đã hoàn thành', '2025-09-24 15:20:27'),
-(92, 4, 33, 545000.000, 'Đã hoàn thành', '2025-09-18 15:24:17'),
-(94, 4, 18, 585000.000, 'Đã hoàn thành', '2025-10-11 05:47:26'),
-(96, 3, 32, 620000.000, 'Đã hoàn thành', '2025-10-26 13:25:17'),
-(97, 4, 22, 470000.000, 'Đã hoàn thành', '2025-09-18 22:40:33'),
-(99, 3, 27, 565000.000, 'Đã hoàn thành', '2025-08-28 16:18:48'),
-(100, 4, 20, 545000.000, 'Đã hoàn thành', '2025-08-05 05:08:38');
 
 -- --------------------------------------------------------
 
@@ -1172,67 +1129,6 @@ CREATE TABLE `payments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
---
--- Dumping data for table `payments`
---
-
-INSERT INTO `payments` (`payment_id`, `booking_id`, `amount`, `status`, `payment_method`, `vnp_txn_ref`, `vnp_bank_code`, `vnp_pay_date`, `created_at`, `updated_at`) VALUES
-(24, 29, 660000.000, 'Thành công', 'VNPAY', 'TXN00024', 'NCB', '20250826210655', '2025-08-26 21:06:55', '2025-08-26 21:06:55'),
-(26, 31, 545000.000, 'Thành công', 'VNPAY', 'TXN00026', 'NCB', '20251022173020', '2025-10-22 17:30:20', '2025-10-22 17:30:20'),
-(27, 32, 660000.000, 'Thành công', 'VNPAY', 'TXN00027', 'NCB', '20250924110810', '2025-09-24 11:08:10', '2025-09-24 11:08:10'),
-(28, 33, 510000.000, 'Thành công', 'VNPAY', 'TXN00028', 'NCB', '20250801035333', '2025-08-01 03:53:33', '2025-08-01 03:53:33'),
-(29, 34, 550000.000, 'Thành công', 'VNPAY', 'TXN00029', 'NCB', '20250807184930', '2025-08-07 18:49:30', '2025-08-07 18:49:30'),
-(30, 35, 435000.000, 'Thành công', 'VNPAY', 'TXN00030', 'NCB', '20250810214546', '2025-08-10 21:45:46', '2025-08-10 21:45:46'),
-(31, 36, 660000.000, 'Thành công', 'VNPAY', 'TXN00031', 'NCB', '20251016170002', '2025-10-16 17:00:02', '2025-10-16 17:00:02'),
-(32, 37, 585000.000, 'Thành công', 'VNPAY', 'TXN00032', 'NCB', '20250826181439', '2025-08-26 18:14:39', '2025-08-26 18:14:39'),
-(33, 38, 550000.000, 'Thành công', 'VNPAY', 'TXN00033', 'NCB', '20250903081929', '2025-09-03 08:19:29', '2025-09-03 08:19:29'),
-(34, 39, 515000.000, 'Thành công', 'VNPAY', 'TXN00034', 'NCB', '20251019174209', '2025-10-19 17:42:09', '2025-10-19 17:42:09'),
-(35, 40, 415000.000, 'Thành công', 'VNPAY', 'TXN00035', 'NCB', '20250802051421', '2025-08-02 05:14:21', '2025-08-02 05:14:21'),
-(36, 41, 340000.000, 'Thành công', 'VNPAY', 'TXN00036', 'NCB', '20251006114710', '2025-10-06 11:47:10', '2025-10-06 11:47:10'),
-(37, 42, 320000.000, 'Thành công', 'VNPAY', 'TXN00037', 'NCB', '20250920130624', '2025-09-20 13:06:24', '2025-09-20 13:06:24'),
-(40, 45, 550000.000, 'Thành công', 'VNPAY', 'TXN00040', 'NCB', '20250902122229', '2025-09-02 12:22:29', '2025-09-02 12:22:29'),
-(42, 47, 515000.000, 'Thành công', 'VNPAY', 'TXN00042', 'NCB', '20250802140003', '2025-08-02 14:00:03', '2025-08-02 14:00:03'),
-(43, 48, 450000.000, 'Thành công', 'VNPAY', 'TXN00043', 'NCB', '20250802055338', '2025-08-02 05:53:38', '2025-08-02 05:53:38'),
-(45, 50, 340000.000, 'Thành công', 'VNPAY', 'TXN00045', 'NCB', '20250922200029', '2025-09-22 20:00:29', '2025-09-22 20:00:29'),
-(46, 51, 700000.000, 'Thành công', 'VNPAY', 'TXN00046', 'NCB', '20250906181044', '2025-09-06 18:10:44', '2025-09-06 18:10:44'),
-(47, 52, 740000.000, 'Thành công', 'VNPAY', 'TXN00047', 'NCB', '20250914072100', '2025-09-14 07:21:00', '2025-09-14 07:21:00'),
-(48, 53, 600000.000, 'Thành công', 'VNPAY', 'TXN00048', 'NCB', '20251006120514', '2025-10-06 12:05:14', '2025-10-06 12:05:14'),
-(49, 54, 415000.000, 'Thành công', 'VNPAY', 'TXN00049', 'NCB', '20250801004940', '2025-08-01 00:49:40', '2025-08-01 00:49:40'),
-(50, 55, 510000.000, 'Thành công', 'VNPAY', 'TXN00050', 'NCB', '20251008153306', '2025-10-08 15:33:06', '2025-10-08 15:33:06'),
-(52, 57, 545000.000, 'Thành công', 'VNPAY', 'TXN00052', 'NCB', '20250803195337', '2025-08-03 19:53:37', '2025-08-03 19:53:37'),
-(54, 59, 470000.000, 'Thành công', 'VNPAY', 'TXN00054', 'NCB', '20250803072623', '2025-08-03 07:26:23', '2025-08-03 07:26:23'),
-(55, 60, 470000.000, 'Thành công', 'VNPAY', 'TXN00055', 'NCB', '20250807054218', '2025-08-07 05:42:18', '2025-08-07 05:42:18'),
-(56, 61, 450000.000, 'Thành công', 'VNPAY', 'TXN00056', 'NCB', '20251012055440', '2025-10-12 05:54:40', '2025-10-12 05:54:40'),
-(57, 62, 550000.000, 'Thành công', 'VNPAY', 'TXN00057', 'NCB', '20250922043301', '2025-09-22 04:33:01', '2025-09-22 04:33:01'),
-(58, 63, 490000.000, 'Thành công', 'VNPAY', 'TXN00058', 'NCB', '20251015083115', '2025-10-15 08:31:15', '2025-10-15 08:31:15'),
-(59, 64, 640000.000, 'Thành công', 'VNPAY', 'TXN00059', 'NCB', '20250920045618', '2025-09-20 04:56:18', '2025-09-20 04:56:18'),
-(60, 65, 510000.000, 'Thành công', 'VNPAY', 'TXN00060', 'NCB', '20250911230327', '2025-09-11 23:03:27', '2025-09-11 23:03:27'),
-(62, 67, 665000.000, 'Thành công', 'VNPAY', 'TXN00062', 'NCB', '20251016192504', '2025-10-16 19:25:04', '2025-10-16 19:25:04'),
-(63, 68, 510000.000, 'Thành công', 'VNPAY', 'TXN00063', 'NCB', '20251024142948', '2025-10-24 14:29:48', '2025-10-24 14:29:48'),
-(64, 69, 515000.000, 'Thành công', 'VNPAY', 'TXN00064', 'NCB', '20250903083441', '2025-09-03 08:34:41', '2025-09-03 08:34:41'),
-(65, 70, 590000.000, 'Thành công', 'VNPAY', 'TXN00065', 'NCB', '20250822200353', '2025-08-22 20:03:53', '2025-08-22 20:03:53'),
-(66, 71, 545000.000, 'Thành công', 'VNPAY', 'TXN00066', 'NCB', '20251030063741', '2025-10-30 06:37:41', '2025-10-30 06:37:41'),
-(67, 72, 740000.000, 'Thành công', 'VNPAY', 'TXN00067', 'NCB', '20250826162634', '2025-08-26 16:26:34', '2025-08-26 16:26:34'),
-(71, 76, 585000.000, 'Thành công', 'VNPAY', 'TXN00071', 'NCB', '20251030053556', '2025-10-30 05:35:56', '2025-10-30 05:35:56'),
-(72, 77, 470000.000, 'Thành công', 'VNPAY', 'TXN00072', 'NCB', '20250917190642', '2025-09-17 19:06:42', '2025-09-17 19:06:42'),
-(73, 78, 640000.000, 'Thành công', 'VNPAY', 'TXN00073', 'NCB', '20250903012823', '2025-09-03 01:28:23', '2025-09-03 01:28:23'),
-(74, 79, 415000.000, 'Thành công', 'VNPAY', 'TXN00074', 'NCB', '20250929044921', '2025-09-29 04:49:21', '2025-09-29 04:49:21'),
-(75, 80, 545000.000, 'Thành công', 'VNPAY', 'TXN00075', 'NCB', '20251007131723', '2025-10-07 13:17:23', '2025-10-07 13:17:23'),
-(77, 82, 515000.000, 'Thành công', 'VNPAY', 'TXN00077', 'NCB', '20250904194546', '2025-09-04 19:45:46', '2025-09-04 19:45:46'),
-(78, 83, 375000.000, 'Thành công', 'VNPAY', 'TXN00078', 'NCB', '20251019155109', '2025-10-19 15:51:09', '2025-10-19 15:51:09'),
-(80, 85, 475000.000, 'Thành công', 'VNPAY', 'TXN00080', 'NCB', '20251020123236', '2025-10-20 12:32:36', '2025-10-20 12:32:36'),
-(81, 86, 320000.000, 'Thành công', 'VNPAY', 'TXN00081', 'NCB', '20250905184226', '2025-09-05 18:42:26', '2025-09-05 18:42:26'),
-(82, 87, 625000.000, 'Thành công', 'VNPAY', 'TXN00082', 'NCB', '20250918194040', '2025-09-18 19:40:40', '2025-09-18 19:40:40'),
-(83, 88, 640000.000, 'Thành công', 'VNPAY', 'TXN00083', 'NCB', '20250806001445', '2025-08-06 00:14:45', '2025-08-06 00:14:45'),
-(85, 90, 395000.000, 'Thành công', 'VNPAY', 'TXN00085', 'NCB', '20251002191412', '2025-10-02 19:14:12', '2025-10-02 19:14:12'),
-(86, 91, 590000.000, 'Thành công', 'VNPAY', 'TXN00086', 'NCB', '20250924152027', '2025-09-24 15:20:27', '2025-09-24 15:20:27'),
-(87, 92, 545000.000, 'Thành công', 'VNPAY', 'TXN00087', 'NCB', '20250918152417', '2025-09-18 15:24:17', '2025-09-18 15:24:17'),
-(89, 94, 585000.000, 'Thành công', 'VNPAY', 'TXN00089', 'NCB', '20251011054726', '2025-10-11 05:47:26', '2025-10-11 05:47:26'),
-(91, 96, 620000.000, 'Thành công', 'VNPAY', 'TXN00091', 'NCB', '20251026132517', '2025-10-26 13:25:17', '2025-10-26 13:25:17'),
-(92, 97, 470000.000, 'Thành công', 'VNPAY', 'TXN00092', 'NCB', '20250918224033', '2025-09-18 22:40:33', '2025-09-18 22:40:33'),
-(94, 99, 565000.000, 'Thành công', 'VNPAY', 'TXN00094', 'NCB', '20250828161848', '2025-08-28 16:18:48', '2025-08-28 16:18:48'),
-(95, 100, 545000.000, 'Thành công', 'VNPAY', 'TXN00095', 'NCB', '20250805050838', '2025-08-05 05:08:38', '2025-08-05 05:08:38');
-
 -- --------------------------------------------------------
 
 --
@@ -1259,33 +1155,33 @@ CREATE TABLE `performances` (
 INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performance_date`, `start_time`, `end_time`, `status`, `price`, `created_at`, `updated_at`) VALUES
 (15, 8, 1, '2025-10-23', '19:30:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (16, 8, 2, '2025-10-26', '20:00:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(17, 8, 1, '2025-11-27', '19:30:00', NULL, 'Đã kết thúc', 200000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(18, 8, 3, '2025-11-30', '18:00:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(19, 9, 2, '2025-11-11', '19:00:00', NULL, 'Đang mở bán', 150000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(20, 9, 3, '2025-11-13', '20:00:00', NULL, 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(21, 9, 1, '2025-11-18', '19:00:00', NULL, 'Đang mở bán', 150000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(22, 9, 2, '2025-11-21', '18:30:00', NULL, 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(23, 10, 3, '2025-11-14', '19:00:00', NULL, 'Đang mở bán', 170000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(24, 10, 1, '2025-11-15', '20:00:00', NULL, 'Đang mở bán', 170000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(25, 10, 2, '2025-11-19', '19:00:00', NULL, 'Đang mở bán', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(26, 10, 1, '2025-11-20', '20:00:00', NULL, 'Đang mở bán', 170000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(27, 10, 3, '2025-11-22', '18:30:00', NULL, 'Đang mở bán', 170000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(28, 11, 1, '2025-11-16', '19:30:00', NULL, 'Đang mở bán', 200000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(29, 11, 2, '2025-11-20', '20:00:00', NULL, 'Đang mở bán', 220000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(17, 8, 1, '2025-11-27', '19:30:00', NULL, 'Đang mở bán', 200000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(18, 8, 3, '2025-11-30', '18:00:00', NULL, 'Đang mở bán', 180000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(19, 9, 2, '2025-11-11', '19:00:00', NULL, 'Đã kết thúc', 150000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(20, 9, 3, '2025-11-13', '20:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(21, 9, 1, '2025-11-18', '19:00:00', NULL, 'Đã kết thúc', 150000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(22, 9, 2, '2025-11-21', '18:30:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(23, 10, 3, '2025-11-14', '19:00:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(24, 10, 1, '2025-11-15', '20:00:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(25, 10, 2, '2025-11-19', '19:00:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(26, 10, 1, '2025-11-20', '20:00:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(27, 10, 3, '2025-11-22', '18:30:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(28, 11, 1, '2025-11-16', '19:30:00', NULL, 'Đã kết thúc', 200000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(29, 11, 2, '2025-11-20', '20:00:00', NULL, 'Đã kết thúc', 220000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (30, 11, 1, '2025-11-23', '19:00:00', NULL, 'Đang mở bán', 200000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (31, 10, 3, '2025-11-25', '18:30:00', NULL, 'Đang mở bán', 220000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(32, 12, 2, '2025-11-17', '19:00:00', NULL, 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(33, 12, 1, '2025-11-19', '20:00:00', NULL, 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(32, 12, 2, '2025-11-17', '19:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(33, 12, 1, '2025-11-19', '20:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (34, 12, 3, '2025-11-24', '20:00:00', NULL, 'Đang mở bán', 170000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (35, 12, 2, '2025-11-26', '19:00:00', NULL, 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(41, 18, 1, '2025-11-12', '19:30:00', '21:10:00', 'Đang mở bán', 250000, '2025-11-04 13:08:55', '2025-11-04 13:08:55'),
-(42, 18, 2, '2025-11-14', '20:00:00', '21:40:00', 'Đang mở bán', 200000, '2025-11-04 13:09:41', '2025-11-04 13:09:41'),
-(43, 18, 3, '2025-11-15', '20:00:00', '21:40:00', 'Đang mở bán', 200000, '2025-11-04 13:10:13', '2025-11-04 13:10:13'),
-(44, 18, 1, '2025-11-17', '20:30:00', '22:10:00', 'Đang mở bán', 180000, '2025-11-04 13:10:59', '2025-11-04 13:10:59'),
-(45, 19, 2, '2025-11-16', '19:30:00', '21:15:00', 'Đang mở bán', 300000, '2025-11-04 13:11:48', '2025-11-04 13:11:48'),
-(46, 19, 1, '2025-11-17', '18:00:00', '19:45:00', 'Đang mở bán', 280000, '2025-11-04 13:12:33', '2025-11-04 13:12:33'),
-(47, 19, 3, '2025-11-19', '20:00:00', '21:45:00', 'Đang mở bán', 300000, '2025-11-04 13:13:11', '2025-11-04 13:13:11'),
-(48, 19, 1, '2025-11-21', '19:30:00', '21:15:00', 'Đang mở bán', 250000, '2025-11-04 13:13:48', '2025-11-04 13:13:48'),
+(41, 18, 1, '2025-11-12', '19:30:00', '21:10:00', 'Đã kết thúc', 250000, '2025-11-04 13:08:55', '2025-11-22 11:47:10'),
+(42, 18, 2, '2025-11-14', '20:00:00', '21:40:00', 'Đã kết thúc', 200000, '2025-11-04 13:09:41', '2025-11-22 11:47:10'),
+(43, 18, 3, '2025-11-15', '20:00:00', '21:40:00', 'Đã kết thúc', 200000, '2025-11-04 13:10:13', '2025-11-22 11:47:10'),
+(44, 18, 1, '2025-11-17', '20:30:00', '22:10:00', 'Đã kết thúc', 180000, '2025-11-04 13:10:59', '2025-11-22 11:47:10'),
+(45, 19, 2, '2025-11-16', '19:30:00', '21:15:00', 'Đã kết thúc', 300000, '2025-11-04 13:11:48', '2025-11-22 11:47:10'),
+(46, 19, 1, '2025-11-17', '18:00:00', '19:45:00', 'Đã kết thúc', 280000, '2025-11-04 13:12:33', '2025-11-22 11:47:10'),
+(47, 19, 3, '2025-11-19', '20:00:00', '21:45:00', 'Đã kết thúc', 300000, '2025-11-04 13:13:11', '2025-11-22 11:47:10'),
+(48, 19, 1, '2025-11-21', '19:30:00', '21:15:00', 'Đã kết thúc', 250000, '2025-11-04 13:13:48', '2025-11-22 11:47:10'),
 (49, 13, 1, '2025-11-23', '19:30:00', '21:05:00', 'Đang mở bán', 350000, '2025-11-04 13:41:51', '2025-11-04 13:41:51'),
 (50, 13, 2, '2025-11-24', '20:00:00', '21:35:00', 'Đang mở bán', 300000, '2025-11-04 13:42:37', '2025-11-04 13:42:37'),
 (51, 17, 3, '2025-11-28', '19:30:00', '21:25:00', 'Đang mở bán', 350000, '2025-11-04 13:43:57', '2025-11-04 13:43:57'),
@@ -1305,22 +1201,6 @@ CREATE TABLE `reviews` (
   `content` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Dumping data for table `reviews`
---
-
-INSERT INTO `reviews` (`review_id`, `show_id`, `user_id`, `rating`, `content`, `created_at`) VALUES
-(1, 9, 2, 5, 'Vở diễn rất hay, diễn viên diễn xuất sắc và câu chuyện lôi cuốn.', '2025-08-05 11:00:00'),
-(11, 10, 3, 4, 'Vở diễn rất hay, diễn viên diễn xuất sắc và câu chuyện lôi cuốn.', '2025-09-25 11:00:00'),
-(30, 11, 4, 5, 'Vở diễn đem lại nhiều cảm xúc, từ tiếng cười đến nước mắt.', '2025-10-28 11:00:00'),
-(31, 19, 2, 5, 'Một trải nghiệm sân khấu vừa kỳ lạ vừa cuốn hút', '2025-11-04 13:34:09'),
-(32, 18, 2, 5, 'Ngọt ngào, lãng mạn, và đầy mộng mơ.', '2025-11-04 13:34:49'),
-(33, 19, 3, 4, 'Câu chuyện hơi chậm ở giữa nhưng tổng thể rất cảm động.', '2025-11-04 13:36:23'),
-(34, 9, 3, 4, 'Ban đầu hơi khó hiểu, nhưng càng xem càng thấy hấp dẫn', '2025-11-04 13:36:47'),
-(35, 18, 3, 3, 'Không hợp gu lắm, hơi chậm và chán', '2025-11-04 13:37:10'),
-(36, 12, 3, 5, 'Đạo diễn giữ được tinh thần nguyên tác mà vẫn mới mẻ.', '2025-11-04 13:37:36'),
-(38, 18, 4, 4, 'Không hợp gu mình lắm nhưng cũng đáng để xem', '2025-11-04 13:39:22');
 
 -- --------------------------------------------------------
 
@@ -1453,16 +1333,10 @@ INSERT INTO `seats` (`seat_id`, `theater_id`, `category_id`, `row_char`, `seat_n
 (208, 2, 1, 'B', 7, 7, '2025-11-17 18:55:09'),
 (209, 2, 2, 'C', 7, 7, '2025-11-17 18:55:09'),
 (210, 2, 1, 'D', 7, 7, '2025-11-17 18:55:09'),
-(214, 2, NULL, 'A', 8, 8, '2025-11-17 18:58:14'),
-(215, 2, NULL, 'B', 8, 8, '2025-11-17 18:58:14'),
-(216, 2, NULL, 'C', 8, 8, '2025-11-17 18:58:14'),
-(217, 2, NULL, 'D', 8, 8, '2025-11-17 18:58:14'),
-(221, 5, 1, 'A', 1, 1, '2025-11-17 18:58:36'),
-(222, 5, 2, 'A', 2, 2, '2025-11-17 18:58:36'),
-(223, 5, 1, 'A', 3, 3, '2025-11-17 18:58:36'),
-(224, 5, 4, 'B', 1, 1, '2025-11-17 18:58:36'),
-(225, 5, 4, 'B', 2, 2, '2025-11-17 18:58:36'),
-(226, 5, 4, 'B', 3, 3, '2025-11-17 18:58:36');
+(214, 2, 1, 'A', 8, 8, '2025-11-17 18:58:14'),
+(215, 2, 1, 'B', 8, 8, '2025-11-17 18:58:14'),
+(216, 2, 2, 'C', 8, 8, '2025-11-17 18:58:14'),
+(217, 2, 1, 'D', 8, 8, '2025-11-17 18:58:14');
 
 -- --------------------------------------------------------
 
@@ -1482,11 +1356,10 @@ CREATE TABLE `seat_categories` (
 --
 
 INSERT INTO `seat_categories` (`category_id`, `category_name`, `base_price`, `color_class`) VALUES
-(1, 'A', 150000, 'c0d6efd'),
-(2, 'B', 75000, 'c198754'),
-(3, 'C', 0, 'c6f42c1'),
-(4, 'D', 50000, 'temp_color'),
-(5, 'a2', 2000, 'FA7AF1');
+(1, 'A', 150000, '0d6efd'),
+(2, 'B', 75000, '198754'),
+(3, 'C', 0, '6f42c1'),
+(6, 'D', 50000, '27ae60');
 
 -- --------------------------------------------------------
 
@@ -2739,19 +2612,78 @@ CREATE TABLE `shows` (
 --
 
 INSERT INTO `shows` (`show_id`, `title`, `description`, `duration_minutes`, `director`, `poster_image_url`, `status`, `created_at`, `updated_at`) VALUES
-(8, 'Đứt dây tơ chùng', 'Câu chuyện xoay quanh những giằng xé trong tình yêu, danh vọng và số phận. Sợi dây tình cảm tưởng chừng bền chặt nhưng lại mong manh trước thử thách của lòng người.', 120, 'Nguyễn Văn Khánh', 'assets/images/dut-day-to-chung-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(9, 'Gánh Cỏ Sông Hàn', 'Lấy bối cảnh miền Trung những năm sau chiến tranh, vở kịch khắc họa số phận những con người mưu sinh bên bến sông Hàn, với tình người chan chứa giữa cuộc đời đầy nhọc nhằn.', 110, 'Trần Thị Mai', 'assets/images/ganh-co-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(8, 'Đứt dây tơ chùng', 'Câu chuyện xoay quanh những giằng xé trong tình yêu, danh vọng và số phận. Sợi dây tình cảm tưởng chừng bền chặt nhưng lại mong manh trước thử thách của lòng người.', 120, 'Nguyễn Văn Khánh', 'assets/images/dut-day-to-chung-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(9, 'Gánh Cỏ Sông Hàn', 'Lấy bối cảnh miền Trung những năm sau chiến tranh, vở kịch khắc họa số phận những con người mưu sinh bên bến sông Hàn, với tình người chan chứa giữa cuộc đời đầy nhọc nhằn.', 110, 'Trần Thị Mai', 'assets/images/ganh-co-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (10, 'Làng Song Sinh', 'Một ngôi làng kỳ bí nơi những cặp song sinh liên tục chào đời. Bí mật phía sau sự trùng hợp ấy dần hé lộ, để rồi đẩy người xem vào những tình huống ly kỳ và ám ảnh.', 100, 'Lê Hoàng Nam', 'assets/images/lang-song-sinh-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (11, 'Lôi Vũ', 'Một trong những vở kịch nổi tiếng nhất thế kỷ XX, “Lôi Vũ” phơi bày những mâu thuẫn giai cấp, đạo đức và gia đình trong xã hội cũ. Vở diễn mang đến sự lay động mạnh mẽ và dư âm lâu dài.', 140, 'Phạm Quang Dũng', 'assets/images/loi-vu.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (12, 'Ngôi Nhà Trong Mây', 'Một câu chuyện thơ mộng về tình yêu và khát vọng sống, nơi con người tìm đến “ngôi nhà trong mây” để trốn chạy thực tại. Nhưng rồi họ nhận ra: hạnh phúc thật sự chỉ đến khi dám đối diện với chính mình.', 104, 'Vũ Thảo My', 'assets/images/ngoi-nha-trong-may-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (13, 'Tấm Cám Đại Chiến', 'Phiên bản hiện đại, vui nhộn và đầy sáng tạo của truyện cổ tích “Tấm Cám”. Với yếu tố gây cười, châm biếm và bất ngờ, vở diễn mang đến những phút giây giải trí thú vị cho cả gia đình.', 95, 'Hoàng Anh Tú', 'assets/images/tam-cam-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-11-04 13:41:51'),
-(14, 'Má ơi út dìa', 'Câu chuyện cảm động về tình mẫu tử và nỗi day dứt của người con xa quê. Những ký ức, những tiếng gọi “Má ơi” trở thành sợi dây kết nối quá khứ và hiện tại.', 110, 'Nguyễn Thị Thanh Hương', 'assets/images/ma-oi-ut-dia-poster.png', 'Sắp chiếu', '2025-11-04 12:37:19', '2025-11-04 12:40:49'),
-(15, 'Tía ơi má dìa', 'Một vở kịch hài – tình cảm về những hiểu lầm, giận hờn và yêu thương trong một gia đình miền Tây. Tiếng cười và nước mắt đan xen tạo nên cảm xúc sâu lắng.', 100, 'Trần Hoài Phong', 'assets/images/tia-oi-ma-dia-poster.jpg', 'Sắp chiếu', '2025-11-04 12:40:24', '2025-11-04 12:40:24'),
-(16, 'Đức Thượng Công Tả Quân Lê Văn Duyệt', 'Tái hiện hình tượng vị danh tướng Lê Văn Duyệt – người để lại dấu ấn sâu đậm trong lịch sử và lòng dân Nam Bộ. Một vở diễn lịch sử trang trọng, đầy khí phách.', 130, 'Phạm Hữu Tấn', 'assets/images/duc-thuong-cong-ta-quan-le-van-duyet-poster.jpg', 'Sắp chiếu', '2025-11-04 12:42:26', '2025-11-04 12:42:26'),
+(14, 'Má ơi út dìa', 'Câu chuyện cảm động về tình mẫu tử và nỗi day dứt của người con xa quê. Những ký ức, những tiếng gọi “Má ơi” trở thành sợi dây kết nối quá khứ và hiện tại.', 110, 'Nguyễn Thị Thanh Hương', 'assets/images/ma-oi-ut-dia-poster.png', 'Đã kết thúc', '2025-11-04 12:37:19', '2025-11-22 11:47:10'),
+(15, 'Tía ơi má dìa', 'Một vở kịch hài – tình cảm về những hiểu lầm, giận hờn và yêu thương trong một gia đình miền Tây. Tiếng cười và nước mắt đan xen tạo nên cảm xúc sâu lắng.', 100, 'Trần Hoài Phong', 'assets/images/tia-oi-ma-dia-poster.jpg', 'Đã kết thúc', '2025-11-04 12:40:24', '2025-11-22 11:47:10'),
+(16, 'Đức Thượng Công Tả Quân Lê Văn Duyệt', 'Tái hiện hình tượng vị danh tướng Lê Văn Duyệt – người để lại dấu ấn sâu đậm trong lịch sử và lòng dân Nam Bộ. Một vở diễn lịch sử trang trọng, đầy khí phách.', 130, 'Phạm Hữu Tấn', 'assets/images/duc-thuong-cong-ta-quan-le-van-duyet-poster.jpg', 'Đã kết thúc', '2025-11-04 12:42:26', '2025-11-22 11:47:10'),
 (17, 'Chuyến Đò Định Mệnh', 'Một câu chuyện đầy kịch tính xoay quanh chuyến đò cuối cùng của đời người lái đò, nơi tình yêu, tội lỗi và sự tha thứ gặp nhau trong một đêm giông bão.', 115, 'Vũ Ngọc Dũng', 'assets/images/chuyen-do-dinh-menh-poster.jpg', 'Đang chiếu', '2025-11-04 12:43:35', '2025-11-04 13:43:57'),
-(18, 'Một Ngày Làm Vua', 'Vở hài kịch xã hội châm biếm về một người bình thường bỗng được trao quyền lực. Từ đó, những tình huống oái oăm, dở khóc dở cười liên tục xảy ra.', 100, 'Nguyễn Hoàng Anh', 'assets/images/mot-ngay-lam-vua-poster.jpg', 'Đang chiếu', '2025-11-04 12:44:58', '2025-11-04 13:08:55'),
-(19, 'Xóm Vịt Trời', 'Một góc nhìn nhân văn và hài hước về cuộc sống mưu sinh của những người lao động nghèo trong một xóm nhỏ ven sông. Dù khốn khó, họ vẫn giữ niềm tin và tình người.', 105, 'Lê Thị Phương Loan', 'assets/images/xom-vit-troi-poster.jpg', 'Đang chiếu', '2025-11-04 12:46:05', '2025-11-04 13:11:48'),
-(20, 'Những con ma nhà hát', '“Những Con Ma Nhà Hát” là một câu chuyện rùng rợn nhưng cũng đầy tính châm biếm, xoay quanh những hiện tượng kỳ bí xảy ra tại một nhà hát cũ sắp bị phá bỏ. Khi đoàn kịch mới đến tập luyện, những bóng ma của các diễn viên quá cố bắt đầu xuất hiện, đưa người xem vào hành trình giằng co giữa nghệ thuật, danh vọng và quá khứ bị lãng quên.', 115, 'Nguyễn Khánh Trung', 'assets/images/nhung-con-ma-poster.jpg', 'Sắp chiếu', '2025-11-04 13:19:55', '2025-11-04 13:19:55');
+(18, 'Một Ngày Làm Vua', 'Vở hài kịch xã hội châm biếm về một người bình thường bỗng được trao quyền lực. Từ đó, những tình huống oái oăm, dở khóc dở cười liên tục xảy ra.', 100, 'Nguyễn Hoàng Anh', 'assets/images/mot-ngay-lam-vua-poster.jpg', 'Đã kết thúc', '2025-11-04 12:44:58', '2025-11-22 11:47:10'),
+(19, 'Xóm Vịt Trời', 'Một góc nhìn nhân văn và hài hước về cuộc sống mưu sinh của những người lao động nghèo trong một xóm nhỏ ven sông. Dù khốn khó, họ vẫn giữ niềm tin và tình người.', 105, 'Lê Thị Phương Loan', 'assets/images/xom-vit-troi-poster.jpg', 'Đã kết thúc', '2025-11-04 12:46:05', '2025-11-22 11:47:10'),
+(20, 'Những con ma nhà hát', '“Những Con Ma Nhà Hát” là một câu chuyện rùng rợn nhưng cũng đầy tính châm biếm, xoay quanh những hiện tượng kỳ bí xảy ra tại một nhà hát cũ sắp bị phá bỏ. Khi đoàn kịch mới đến tập luyện, những bóng ma của các diễn viên quá cố bắt đầu xuất hiện, đưa người xem vào hành trình giằng co giữa nghệ thuật, danh vọng và quá khứ bị lãng quên.', 115, 'Nguyễn Khánh Trung', 'assets/images/nhung-con-ma-poster.jpg', 'Đã kết thúc', '2025-11-04 13:19:55', '2025-11-22 11:47:10');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `show_actors`
+--
+
+CREATE TABLE `show_actors` (
+  `show_id` int(11) NOT NULL,
+  `actor_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Dumping data for table `show_actors`
+--
+
+INSERT INTO `show_actors` (`show_id`, `actor_id`) VALUES
+(8, 2),
+(8, 4),
+(8, 6),
+(8, 9),
+(8, 10),
+(9, 2),
+(9, 3),
+(9, 5),
+(10, 3),
+(10, 8),
+(10, 10),
+(11, 1),
+(11, 5),
+(11, 6),
+(12, 5),
+(12, 6),
+(12, 9),
+(13, 5),
+(13, 6),
+(13, 7),
+(14, 3),
+(14, 5),
+(14, 7),
+(15, 2),
+(15, 3),
+(15, 4),
+(16, 3),
+(16, 4),
+(16, 10),
+(17, 1),
+(17, 6),
+(17, 8),
+(17, 10),
+(18, 2),
+(18, 5),
+(18, 7),
+(19, 2),
+(19, 3),
+(19, 4),
+(20, 4),
+(20, 8),
+(20, 10);
 
 -- --------------------------------------------------------
 
@@ -2826,8 +2758,7 @@ CREATE TABLE `theaters` (
 INSERT INTO `theaters` (`theater_id`, `name`, `total_seats`, `created_at`, `status`) VALUES
 (1, 'Main Hall', 52, '2025-10-03 16:14:11', 'Đã hoạt động'),
 (2, 'Black Box', 32, '2025-10-03 16:14:22', 'Đã hoạt động'),
-(3, 'Studio', 30, '2025-10-03 16:14:32', 'Đã hoạt động'),
-(5, 'Special', 6, '2025-11-17 18:58:36', 'Đã hoạt động');
+(3, 'Studio', 30, '2025-10-03 16:14:32', 'Đã hoạt động');
 
 -- --------------------------------------------------------
 
@@ -2844,122 +2775,6 @@ CREATE TABLE `tickets` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
---
--- Dumping data for table `tickets`
---
-
-INSERT INTO `tickets` (`ticket_id`, `booking_id`, `seat_id`, `ticket_code`, `status`, `created_at`) VALUES
-(45, 29, 61, 'TICK00045', 'Hợp lệ', '2025-08-26 21:06:55'),
-(46, 29, 55, 'TICK00046', 'Hợp lệ', '2025-08-26 21:06:55'),
-(49, 31, 70, 'TICK00049', 'Hợp lệ', '2025-10-22 17:30:20'),
-(50, 31, 63, 'TICK00050', 'Hợp lệ', '2025-10-22 17:30:20'),
-(51, 32, 59, 'TICK00051', 'Hợp lệ', '2025-09-24 11:08:10'),
-(52, 32, 58, 'TICK00052', 'Hợp lệ', '2025-09-24 11:08:10'),
-(53, 33, 75, 'TICK00053', 'Hợp lệ', '2025-08-01 03:53:33'),
-(54, 33, 60, 'TICK00054', 'Hợp lệ', '2025-08-01 03:53:33'),
-(55, 34, 50, 'TICK00055', 'Hợp lệ', '2025-08-07 18:49:30'),
-(56, 34, 6, 'TICK00056', 'Hợp lệ', '2025-08-07 18:49:30'),
-(57, 35, 21, 'TICK00057', 'Hợp lệ', '2025-08-10 21:45:46'),
-(58, 35, 47, 'TICK00058', 'Hợp lệ', '2025-08-10 21:45:46'),
-(59, 36, 56, 'TICK00059', 'Hợp lệ', '2025-10-16 17:00:02'),
-(60, 36, 60, 'TICK00060', 'Hợp lệ', '2025-10-16 17:00:02'),
-(61, 37, 19, 'TICK00061', 'Hợp lệ', '2025-08-26 18:14:39'),
-(62, 37, 29, 'TICK00062', 'Hợp lệ', '2025-08-26 18:14:39'),
-(63, 38, 3, 'TICK00063', 'Hợp lệ', '2025-09-03 08:19:29'),
-(64, 38, 50, 'TICK00064', 'Hợp lệ', '2025-09-03 08:19:29'),
-(65, 39, 102, 'TICK00065', 'Hợp lệ', '2025-10-19 17:42:09'),
-(66, 39, 92, 'TICK00066', 'Hợp lệ', '2025-10-19 17:42:09'),
-(67, 40, 97, 'TICK00067', 'Hợp lệ', '2025-08-02 05:14:21'),
-(68, 40, 93, 'TICK00068', 'Hợp lệ', '2025-08-02 05:14:21'),
-(69, 41, 105, 'TICK00069', 'Hợp lệ', '2025-10-06 11:47:10'),
-(70, 41, 101, 'TICK00070', 'Hợp lệ', '2025-10-06 11:47:10'),
-(71, 42, 75, 'TICK00071', 'Hợp lệ', '2025-09-20 13:06:24'),
-(72, 42, 76, 'TICK00072', 'Hợp lệ', '2025-09-20 13:06:24'),
-(77, 45, 44, 'TICK00077', 'Hợp lệ', '2025-09-02 12:22:29'),
-(78, 45, 18, 'TICK00078', 'Hợp lệ', '2025-09-02 12:22:29'),
-(81, 47, 65, 'TICK00081', 'Hợp lệ', '2025-08-02 14:00:03'),
-(82, 47, 71, 'TICK00082', 'Hợp lệ', '2025-08-02 14:00:03'),
-(83, 48, 38, 'TICK00083', 'Hợp lệ', '2025-08-02 05:53:38'),
-(84, 48, 6, 'TICK00084', 'Hợp lệ', '2025-08-02 05:53:38'),
-(87, 50, 32, 'TICK00087', 'Hợp lệ', '2025-09-22 20:00:29'),
-(88, 50, 49, 'TICK00088', 'Hợp lệ', '2025-09-22 20:00:29'),
-(89, 51, 13, 'TICK00089', 'Hợp lệ', '2025-09-06 18:10:44'),
-(90, 51, 11, 'TICK00090', 'Hợp lệ', '2025-09-06 18:10:44'),
-(91, 52, 54, 'TICK00091', 'Hợp lệ', '2025-09-14 07:21:00'),
-(92, 52, 53, 'TICK00092', 'Hợp lệ', '2025-09-14 07:21:00'),
-(93, 53, 2, 'TICK00093', 'Hợp lệ', '2025-10-06 12:05:14'),
-(94, 53, 18, 'TICK00094', 'Hợp lệ', '2025-10-06 12:05:14'),
-(95, 54, 90, 'TICK00095', 'Hợp lệ', '2025-08-01 00:49:40'),
-(96, 54, 97, 'TICK00096', 'Hợp lệ', '2025-08-01 00:49:40'),
-(97, 55, 96, 'TICK00097', 'Hợp lệ', '2025-10-08 15:33:06'),
-(98, 55, 79, 'TICK00098', 'Hợp lệ', '2025-10-08 15:33:06'),
-(101, 57, 66, 'TICK00101', 'Hợp lệ', '2025-08-03 19:53:37'),
-(102, 57, 55, 'TICK00102', 'Hợp lệ', '2025-08-03 19:53:37'),
-(105, 59, 65, 'TICK00105', 'Hợp lệ', '2025-08-03 07:26:23'),
-(106, 59, 69, 'TICK00106', 'Hợp lệ', '2025-08-03 07:26:23'),
-(107, 60, 74, 'TICK00107', 'Hợp lệ', '2025-08-07 05:42:18'),
-(108, 60, 59, 'TICK00108', 'Hợp lệ', '2025-08-07 05:42:18'),
-(109, 61, 64, 'TICK00109', 'Hợp lệ', '2025-10-12 05:54:40'),
-(110, 61, 74, 'TICK00110', 'Hợp lệ', '2025-10-12 05:54:40'),
-(111, 62, 43, 'TICK00111', 'Hợp lệ', '2025-09-22 04:33:01'),
-(112, 62, 4, 'TICK00112', 'Hợp lệ', '2025-09-22 04:33:01'),
-(113, 63, 10, 'TICK00113', 'Hợp lệ', '2025-10-15 08:31:15'),
-(114, 63, 43, 'TICK00114', 'Hợp lệ', '2025-10-15 08:31:15'),
-(115, 64, 88, 'TICK00115', 'Hợp lệ', '2025-09-20 04:56:18'),
-(116, 64, 81, 'TICK00116', 'Hợp lệ', '2025-09-20 04:56:18'),
-(117, 65, 99, 'TICK00117', 'Hợp lệ', '2025-09-11 23:03:27'),
-(118, 65, 83, 'TICK00118', 'Hợp lệ', '2025-09-11 23:03:27'),
-(121, 67, 70, 'TICK00121', 'Hợp lệ', '2025-10-16 19:25:04'),
-(122, 67, 64, 'TICK00122', 'Hợp lệ', '2025-10-16 19:25:04'),
-(123, 68, 11, 'TICK00123', 'Hợp lệ', '2025-10-24 14:29:48'),
-(124, 68, 37, 'TICK00124', 'Hợp lệ', '2025-10-24 14:29:48'),
-(125, 69, 94, 'TICK00125', 'Hợp lệ', '2025-09-03 08:34:41'),
-(126, 69, 95, 'TICK00126', 'Hợp lệ', '2025-09-03 08:34:41'),
-(127, 70, 80, 'TICK00127', 'Hợp lệ', '2025-08-22 20:03:53'),
-(128, 70, 97, 'TICK00128', 'Hợp lệ', '2025-08-22 20:03:53'),
-(129, 71, 22, 'TICK00129', 'Hợp lệ', '2025-10-30 06:37:41'),
-(130, 71, 6, 'TICK00130', 'Hợp lệ', '2025-10-30 06:37:41'),
-(131, 72, 85, 'TICK00131', 'Hợp lệ', '2025-08-26 16:26:34'),
-(132, 72, 84, 'TICK00132', 'Hợp lệ', '2025-08-26 16:26:34'),
-(139, 76, 55, 'TICK00139', 'Hợp lệ', '2025-10-30 05:35:56'),
-(140, 76, 65, 'TICK00140', 'Hợp lệ', '2025-10-30 05:35:56'),
-(141, 77, 58, 'TICK00141', 'Hợp lệ', '2025-09-17 19:06:42'),
-(142, 77, 71, 'TICK00142', 'Hợp lệ', '2025-09-17 19:06:42'),
-(143, 78, 77, 'TICK00143', 'Hợp lệ', '2025-09-03 01:28:23'),
-(144, 78, 87, 'TICK00144', 'Hợp lệ', '2025-09-03 01:28:23'),
-(145, 79, 89, 'TICK00145', 'Hợp lệ', '2025-09-29 04:49:21'),
-(146, 79, 99, 'TICK00146', 'Hợp lệ', '2025-09-29 04:49:21'),
-(147, 80, 53, 'TICK00147', 'Hợp lệ', '2025-10-07 13:17:23'),
-(148, 80, 70, 'TICK00148', 'Hợp lệ', '2025-10-07 13:17:23'),
-(151, 82, 68, 'TICK00151', 'Hợp lệ', '2025-09-04 19:45:46'),
-(152, 82, 72, 'TICK00152', 'Hợp lệ', '2025-09-04 19:45:46'),
-(153, 83, 33, 'TICK00153', 'Hợp lệ', '2025-10-19 15:51:09'),
-(154, 83, 26, 'TICK00154', 'Hợp lệ', '2025-10-19 15:51:09'),
-(157, 85, 27, 'TICK00157', 'Hợp lệ', '2025-10-20 12:32:36'),
-(158, 85, 36, 'TICK00158', 'Hợp lệ', '2025-10-20 12:32:36'),
-(159, 86, 106, 'TICK00159', 'Hợp lệ', '2025-09-05 18:42:26'),
-(160, 86, 95, 'TICK00160', 'Hợp lệ', '2025-09-05 18:42:26'),
-(161, 87, 21, 'TICK00161', 'Hợp lệ', '2025-09-18 19:40:40'),
-(162, 87, 10, 'TICK00162', 'Hợp lệ', '2025-09-18 19:40:40'),
-(163, 88, 87, 'TICK00163', 'Hợp lệ', '2025-08-06 00:14:45'),
-(164, 88, 78, 'TICK00164', 'Hợp lệ', '2025-08-06 00:14:45'),
-(167, 90, 52, 'TICK00167', 'Hợp lệ', '2025-10-02 19:14:12'),
-(168, 90, 25, 'TICK00168', 'Hợp lệ', '2025-10-02 19:14:12'),
-(169, 91, 63, 'TICK00169', 'Hợp lệ', '2025-09-24 15:20:27'),
-(170, 91, 74, 'TICK00170', 'Hợp lệ', '2025-09-24 15:20:27'),
-(171, 92, 29, 'TICK00171', 'Hợp lệ', '2025-09-18 15:24:17'),
-(172, 92, 18, 'TICK00172', 'Hợp lệ', '2025-09-18 15:24:17'),
-(175, 94, 77, 'TICK00175', 'Hợp lệ', '2025-10-11 05:47:26'),
-(176, 94, 92, 'TICK00176', 'Hợp lệ', '2025-10-11 05:47:26'),
-(179, 96, 56, 'TICK00179', 'Hợp lệ', '2025-10-26 13:25:17'),
-(180, 96, 60, 'TICK00180', 'Hợp lệ', '2025-10-26 13:25:17'),
-(181, 97, 72, 'TICK00181', 'Hợp lệ', '2025-09-18 22:40:33'),
-(182, 97, 54, 'TICK00182', 'Hợp lệ', '2025-09-18 22:40:33'),
-(185, 99, 90, 'TICK00185', 'Hợp lệ', '2025-08-28 16:18:48'),
-(186, 99, 82, 'TICK00186', 'Hợp lệ', '2025-08-28 16:18:48'),
-(187, 100, 91, 'TICK00187', 'Hợp lệ', '2025-08-05 05:08:38'),
-(188, 100, 88, 'TICK00188', 'Hợp lệ', '2025-08-05 05:08:38');
-
 -- --------------------------------------------------------
 
 --
@@ -2970,8 +2785,8 @@ CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `account_name` varchar(100) DEFAULT NULL,
-  `user_type` enum('Nhân viên','Admin') DEFAULT NULL,
+  `account_name` varchar(100) NOT NULL,
+  `user_type` enum('Nhân viên','Admin') NOT NULL,
   `status` enum('hoạt động','khóa') NOT NULL DEFAULT 'hoạt động',
   `is_verified` tinyint(1) NOT NULL DEFAULT 0,
   `otp_code` varchar(10) DEFAULT NULL,
@@ -2984,11 +2799,8 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`user_id`, `email`, `password`, `account_name`, `user_type`, `status`, `is_verified`, `otp_code`, `otp_expires_at`) VALUES
 (1, 'staff@example.com', '$2a$11$jSoyDGEyNSgflwPKbQyA5.wFUNvhqXLQ5rzeoNSbl.YaZZ8ZrpKwm', 'thanhngoc', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
-(2, 'mytrangle1509@gmail.com', '$2y$10$0doy81SVgcSvSwMD/VBK2OGfKf6yIVFEnCmzZYR15PjSq/yGz8p.C', 'trangle', '', 'hoạt động', 1, NULL, NULL),
-(3, 'hoaithunguyen066@gmail.com', '$2y$10$6pjx5wsk.tW3icop/RZjWu0nMUqs61OhljS8NttNHqOxG2yP/sZdK', 'hoaithu', '', 'hoạt động', 1, NULL, NULL),
-(4, 'nguyenthithuytrang2020bd@gmail.com', '$2y$10$qEOSBdHhLThH6gneJ2tki.YIdoFCGM7wsBScXYAZ7sgZpDUIuLKSW', 'thuytrang', '', 'hoạt động', 1, NULL, NULL),
-(6, 'trangltmt1509@gmail.com', '$2y$10$MTCttS.vzYX2xjZlEV7H9uEwBtOHw4LkrCtgxEmGLTQzABBKTt2sK', 'thuylinh', 'Admin', 'khóa', 1, NULL, NULL),
-(7, 'admin@example.com', '$2a$11$DdN7GNbBhFyWRYFuKArD7.BfmqgzIpLYXkp7B6SgJBFnLDk5ZCmfG', 'Admin', 'Admin', 'hoạt động', 1, NULL, NULL);
+(7, 'admin@example.com', '$2a$11$DdN7GNbBhFyWRYFuKArD7.BfmqgzIpLYXkp7B6SgJBFnLDk5ZCmfG', 'Admin', 'Admin', 'hoạt động', 1, NULL, NULL),
+(13, 'mytrangle1509@gmail.com', '$2a$11$fvjwkQmdmtbZ9OtnOh7tGOp.yEHxWnAzu7n9be7OJtterz8v9AbZS', 'trangle', 'Admin', 'hoạt động', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -3009,15 +2821,18 @@ CREATE TABLE `user_detail` (
 --
 
 INSERT INTO `user_detail` (`user_id`, `full_name`, `date_of_birth`, `address`, `phone`) VALUES
-(1, 'Dương Thanh Ngọc', '2005-08-12', NULL, NULL),
-(2, 'Lê Thị Mỹ Trang', '2005-09-15', NULL, NULL),
-(3, 'Nguyễn Hoài Thu', '2005-08-21', NULL, NULL),
-(4, 'Nguyễn Thị Thùy Trang', '2005-03-12', NULL, NULL),
+(1, '', '2005-08-12', '', ''),
 (7, 'Le My Phung', '2025-11-22', '', '');
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `actors`
+--
+ALTER TABLE `actors`
+  ADD PRIMARY KEY (`actor_id`);
 
 --
 -- Indexes for table `bookings`
@@ -3086,6 +2901,13 @@ ALTER TABLE `shows`
   ADD PRIMARY KEY (`show_id`);
 
 --
+-- Indexes for table `show_actors`
+--
+ALTER TABLE `show_actors`
+  ADD PRIMARY KEY (`show_id`,`actor_id`),
+  ADD KEY `fk_show_actors_actor` (`actor_id`);
+
+--
 -- Indexes for table `show_genres`
 --
 ALTER TABLE `show_genres`
@@ -3113,7 +2935,8 @@ ALTER TABLE `tickets`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `unique_email` (`email`);
+  ADD UNIQUE KEY `unique_email` (`email`),
+  ADD UNIQUE KEY `unique_account` (`account_name`);
 
 --
 -- Indexes for table `user_detail`
@@ -3125,6 +2948,12 @@ ALTER TABLE `user_detail`
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `actors`
+--
+ALTER TABLE `actors`
+  MODIFY `actor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `bookings`
@@ -3166,7 +2995,7 @@ ALTER TABLE `seats`
 -- AUTO_INCREMENT for table `seat_categories`
 --
 ALTER TABLE `seat_categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `shows`
@@ -3190,7 +3019,7 @@ ALTER TABLE `tickets`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- Constraints for dumped tables
@@ -3239,6 +3068,13 @@ ALTER TABLE `seat_performance`
   ADD CONSTRAINT `fk_sp_seat` FOREIGN KEY (`seat_id`) REFERENCES `seats` (`seat_id`),
   ADD CONSTRAINT `idx_seat_id` FOREIGN KEY (`seat_id`) REFERENCES `seats` (`seat_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `sp_performance_idx` FOREIGN KEY (`performance_id`) REFERENCES `performances` (`performance_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `show_actors`
+--
+ALTER TABLE `show_actors`
+  ADD CONSTRAINT `fk_show_actors_actor` FOREIGN KEY (`actor_id`) REFERENCES `actors` (`actor_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_show_actors_show` FOREIGN KEY (`show_id`) REFERENCES `shows` (`show_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `show_genres`

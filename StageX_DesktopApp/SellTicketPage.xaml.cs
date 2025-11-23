@@ -345,13 +345,8 @@ namespace StageX_DesktopApp
                 SeatMapGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(35) });
             }
 
-            // Bản đồ màu cho từng hạng ghế (A, B, C). Sử dụng màu sáng để dễ phân biệt.
-            var categoryColors = new Dictionary<string, System.Windows.Media.Color>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "A", System.Windows.Media.Color.FromRgb(33, 150, 243) },   // Màu xanh dương
-                { "B", System.Windows.Media.Color.FromRgb(76, 175, 80) },    // Màu xanh lá
-                { "C", System.Windows.Media.Color.FromRgb(103, 58, 183) }    // Màu tím
-            };
+            // Không dùng bản đồ màu cố định nữa. Màu ghế sẽ dựa trên trường color_class trả về từ CSDL.
+            // Nếu color_class rỗng hoặc null, sẽ dùng màu mặc định tối.
 
             foreach (var seat in seatList)
             {
@@ -378,11 +373,24 @@ namespace StageX_DesktopApp
                 }
                 else
                 {
-                    // Ghế còn trống: màu theo hạng ghế
-                    btn.Background = new SolidColorBrush(
-                        categoryColors.TryGetValue(seat.category_name?.Trim() ?? string.Empty, out var col)
-                            ? col
-                            : System.Windows.Media.Color.FromRgb(30, 40, 60));
+                    // Ghế còn trống: màu theo mã color_class (hex) hoặc màu mặc định nếu không có thông tin
+                    if (!string.IsNullOrWhiteSpace(seat.color_class))
+                    {
+                        try
+                        {
+                            // Thêm dấu # để tạo mã màu hợp lệ WPF
+                            var brush = (SolidColorBrush)new BrushConverter().ConvertFrom($"#{seat.color_class.Trim()}");
+                            btn.Background = brush;
+                        }
+                        catch
+                        {
+                            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 40, 60));
+                        }
+                    }
+                    else
+                    {
+                        btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 40, 60));
+                    }
                     btn.IsEnabled = true;
                     btn.ToolTip = $"{seat.category_name}(+{seat.base_price:N0}đ)";
                 }
@@ -590,7 +598,19 @@ namespace StageX_DesktopApp
             string paymentMethod = selectedPaymentMethod;
             if (paymentMethod == "Tiền mặt")
             {
-                if (!decimal.TryParse(CustomerCashTextBox.Text, out decimal given) || given < total)
+                // GHI CHÚ: Đảm bảo số tiền khách đưa là số tròn nghìn và đủ để thanh toán
+                if (!decimal.TryParse(CustomerCashTextBox.Text, out decimal given))
+                {
+                    MessageBox.Show("Số tiền khách đưa không hợp lệ.");
+                    return;
+                }
+                // Kiểm tra số tiền có phải là bội số của 1.000 hay không
+                if (given % 1000 != 0)
+                {
+                    MessageBox.Show("Số tiền phải là số tròn nghìn");
+                    return;
+                }
+                if (given < total)
                 {
                     MessageBox.Show("Số tiền khách đưa không đủ.");
                     return;
