@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 23, 2025 at 12:49 PM
+-- Generation Time: Nov 23, 2025 at 09:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -151,20 +151,10 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_booking` (IN `p_user_id
     SELECT LAST_INSERT_ID() AS booking_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_booking_pos` (IN `in_user_id` INT, IN `in_performance_id` INT, IN `in_total_amount` DECIMAL(10,2))   BEGIN
-    /*
-      Gọi thủ tục proc_create_booking để tạo đơn hàng và vé.
-      Ứng dụng sẽ truyền danh sách ghế và thực hiện vòng lặp tạo vé ở phía client.
-      Sau khi thủ tục proc_create_booking được gọi, bảng bookings sẽ tạo dòng mới với booking_status là 'Đang chờ'.
-      Sau đó chúng ta cập nhật booking_status thành 'Đã thanh toán POS' để biểu thị đã thanh toán tại quầy.
-    */
-    -- Gọi proc_create_booking để tạo đơn hàng với booking_status = 'Đang xử lý'
-    CALL proc_create_booking(in_user_id, in_performance_id, in_total_amount);
-    -- Sau khi tạo đơn hàng tại quầy, cập nhật trạng thái thành 'Đã hoàn thành'
-    UPDATE bookings 
-    SET booking_status = 'Đã hoàn thành'
-    WHERE booking_id = LAST_INSERT_ID();
-    -- Trả về id booking vừa tạo
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_booking_pos` (IN `in_user_id` INT, IN `in_performance_id` INT, IN `in_total_amount` DECIMAL(10,2), IN `in_created_by` INT)   BEGIN
+    INSERT INTO bookings (user_id, performance_id, total_amount, booking_status, created_at, created_by)
+    VALUES (in_user_id, in_performance_id, in_total_amount, 'Đã hoàn thành', NOW(), in_created_by);
+
     SELECT LAST_INSERT_ID() AS booking_id;
 END$$
 
@@ -1071,75 +1061,80 @@ INSERT INTO `actors` (`actor_id`, `full_name`, `nick_name`, `avatar_url`, `email
 
 CREATE TABLE `bookings` (
   `booking_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `performance_id` int(11) NOT NULL,
   `total_amount` decimal(10,3) NOT NULL,
   `booking_status` enum('Đang xử lý','Đã hoàn thành','Đã hủy') NOT NULL DEFAULT 'Đang xử lý',
-  `created_at` timestamp NULL DEFAULT current_timestamp()
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `created_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
 
 --
 -- Dumping data for table `bookings`
 --
 
-INSERT INTO `bookings` (`booking_id`, `user_id`, `performance_id`, `total_amount`, `booking_status`, `created_at`) VALUES
-(29, 4, 16, 660000.000, 'Đã hoàn thành', '2025-08-26 21:06:55'),
-(31, 3, 32, 545000.000, 'Đã hoàn thành', '2025-10-22 17:30:20'),
-(32, 3, 16, 660000.000, 'Đã hoàn thành', '2025-09-24 11:08:10'),
-(33, 2, 25, 510000.000, 'Đã hoàn thành', '2025-08-01 03:53:33'),
-(34, 4, 28, 550000.000, 'Đã hoàn thành', '2025-08-07 18:49:30'),
-(35, 4, 15, 435000.000, 'Đã hoàn thành', '2025-08-10 21:45:46'),
-(36, 2, 16, 660000.000, 'Đã hoàn thành', '2025-10-16 17:00:02'),
-(37, 4, 15, 585000.000, 'Đã hoàn thành', '2025-08-26 18:14:39'),
-(38, 3, 30, 550000.000, 'Đã hoàn thành', '2025-09-03 08:19:29'),
-(39, 2, 31, 515000.000, 'Đã hoàn thành', '2025-10-19 17:42:09'),
-(40, 3, 34, 415000.000, 'Đã hoàn thành', '2025-08-02 05:14:21'),
-(41, 4, 27, 340000.000, 'Đã hoàn thành', '2025-10-06 11:47:10'),
-(42, 4, 32, 320000.000, 'Đã hoàn thành', '2025-09-20 13:06:24'),
-(45, 2, 30, 550000.000, 'Đã hoàn thành', '2025-09-02 12:22:29'),
-(47, 3, 29, 515000.000, 'Đã hoàn thành', '2025-08-02 14:00:03'),
-(48, 3, 21, 450000.000, 'Đã hoàn thành', '2025-08-02 05:53:38'),
-(50, 2, 24, 340000.000, 'Đã hoàn thành', '2025-09-22 20:00:29'),
-(51, 4, 30, 700000.000, 'Đã hoàn thành', '2025-09-06 18:10:44'),
-(52, 2, 29, 740000.000, 'Đã hoàn thành', '2025-09-14 07:21:00'),
-(53, 3, 21, 600000.000, 'Đã hoàn thành', '2025-10-06 12:05:14'),
-(54, 4, 23, 415000.000, 'Đã hoàn thành', '2025-08-01 00:49:40'),
-(55, 3, 18, 510000.000, 'Đã hoàn thành', '2025-10-08 15:33:06'),
-(57, 4, 32, 545000.000, 'Đã hoàn thành', '2025-08-03 19:53:37'),
-(59, 3, 32, 470000.000, 'Đã hoàn thành', '2025-08-03 07:26:23'),
-(60, 4, 35, 470000.000, 'Đã hoàn thành', '2025-08-07 05:42:18'),
-(61, 2, 19, 450000.000, 'Đã hoàn thành', '2025-10-12 05:54:40'),
-(62, 4, 17, 550000.000, 'Đã hoàn thành', '2025-09-22 04:33:01'),
-(63, 3, 24, 490000.000, 'Đã hoàn thành', '2025-10-15 08:31:15'),
-(64, 3, 27, 640000.000, 'Đã hoàn thành', '2025-09-20 04:56:18'),
-(65, 4, 18, 510000.000, 'Đã hoàn thành', '2025-09-11 23:03:27'),
-(67, 4, 29, 665000.000, 'Đã hoàn thành', '2025-10-16 19:25:04'),
-(68, 3, 15, 510000.000, 'Đã hoàn thành', '2025-10-24 14:29:48'),
-(69, 2, 31, 515000.000, 'Đã hoàn thành', '2025-09-03 08:34:41'),
-(70, 3, 31, 590000.000, 'Đã hoàn thành', '2025-08-22 20:03:53'),
-(71, 3, 33, 545000.000, 'Đã hoàn thành', '2025-10-30 06:37:41'),
-(72, 3, 31, 740000.000, 'Đã hoàn thành', '2025-08-26 16:26:34'),
-(76, 2, 25, 585000.000, 'Đã hoàn thành', '2025-10-30 05:35:56'),
-(77, 4, 32, 470000.000, 'Đã hoàn thành', '2025-09-17 19:06:42'),
-(78, 4, 27, 640000.000, 'Đã hoàn thành', '2025-09-03 01:28:23'),
-(79, 2, 27, 415000.000, 'Đã hoàn thành', '2025-09-29 04:49:21'),
-(80, 3, 35, 545000.000, 'Đã hoàn thành', '2025-10-07 13:17:23'),
-(82, 3, 29, 515000.000, 'Đã hoàn thành', '2025-09-04 19:45:46'),
-(83, 2, 21, 375000.000, 'Đã hoàn thành', '2025-10-19 15:51:09'),
-(85, 3, 28, 475000.000, 'Đã hoàn thành', '2025-10-20 12:32:36'),
-(86, 4, 20, 320000.000, 'Đã hoàn thành', '2025-09-05 18:42:26'),
-(87, 3, 17, 625000.000, 'Đã hoàn thành', '2025-09-18 19:40:40'),
-(88, 4, 34, 640000.000, 'Đã hoàn thành', '2025-08-06 00:14:45'),
-(90, 2, 33, 395000.000, 'Đã hoàn thành', '2025-10-02 19:14:12'),
-(91, 4, 29, 590000.000, 'Đã hoàn thành', '2025-09-24 15:20:27'),
-(92, 4, 33, 545000.000, 'Đã hoàn thành', '2025-09-18 15:24:17'),
-(94, 4, 18, 585000.000, 'Đã hoàn thành', '2025-10-11 05:47:26'),
-(96, 3, 32, 620000.000, 'Đã hoàn thành', '2025-10-26 13:25:17'),
-(97, 4, 22, 470000.000, 'Đã hoàn thành', '2025-09-18 22:40:33'),
-(99, 3, 27, 565000.000, 'Đã hoàn thành', '2025-08-28 16:18:48'),
-(100, 4, 20, 545000.000, 'Đã hoàn thành', '2025-08-05 05:08:38');
+INSERT INTO `bookings` (`booking_id`, `user_id`, `performance_id`, `total_amount`, `booking_status`, `created_at`, `created_by`) VALUES
+(29, 4, 16, 660000.000, 'Đã hoàn thành', '2025-08-26 21:06:55', NULL),
+(31, 3, 32, 545000.000, 'Đã hoàn thành', '2025-10-22 17:30:20', NULL),
+(32, 3, 16, 660000.000, 'Đã hoàn thành', '2025-09-24 11:08:10', NULL),
+(33, 2, 25, 510000.000, 'Đã hoàn thành', '2025-08-01 03:53:33', NULL),
+(34, 4, 28, 550000.000, 'Đã hoàn thành', '2025-08-07 18:49:30', NULL),
+(35, 4, 15, 435000.000, 'Đã hoàn thành', '2025-08-10 21:45:46', NULL),
+(36, 2, 16, 660000.000, 'Đã hoàn thành', '2025-10-16 17:00:02', NULL),
+(37, 4, 15, 585000.000, 'Đã hoàn thành', '2025-08-26 18:14:39', NULL),
+(38, 3, 30, 550000.000, 'Đã hoàn thành', '2025-09-03 08:19:29', NULL),
+(39, 2, 31, 515000.000, 'Đã hoàn thành', '2025-10-19 17:42:09', NULL),
+(40, 3, 34, 415000.000, 'Đã hoàn thành', '2025-08-02 05:14:21', NULL),
+(41, 4, 27, 340000.000, 'Đã hoàn thành', '2025-10-06 11:47:10', NULL),
+(42, 4, 32, 320000.000, 'Đã hoàn thành', '2025-09-20 13:06:24', NULL),
+(45, 2, 30, 550000.000, 'Đã hoàn thành', '2025-09-02 12:22:29', NULL),
+(47, 3, 29, 515000.000, 'Đã hoàn thành', '2025-08-02 14:00:03', NULL),
+(48, 3, 21, 450000.000, 'Đã hoàn thành', '2025-08-02 05:53:38', NULL),
+(50, 2, 24, 340000.000, 'Đã hoàn thành', '2025-09-22 20:00:29', NULL),
+(51, 4, 30, 700000.000, 'Đã hoàn thành', '2025-09-06 18:10:44', NULL),
+(52, 2, 29, 740000.000, 'Đã hoàn thành', '2025-09-14 07:21:00', NULL),
+(53, 3, 21, 600000.000, 'Đã hoàn thành', '2025-10-06 12:05:14', NULL),
+(54, 4, 23, 415000.000, 'Đã hoàn thành', '2025-08-01 00:49:40', NULL),
+(55, 3, 18, 510000.000, 'Đã hoàn thành', '2025-10-08 15:33:06', NULL),
+(57, 4, 32, 545000.000, 'Đã hoàn thành', '2025-08-03 19:53:37', NULL),
+(59, 3, 32, 470000.000, 'Đã hoàn thành', '2025-08-03 07:26:23', NULL),
+(60, 4, 35, 470000.000, 'Đã hoàn thành', '2025-08-07 05:42:18', NULL),
+(61, 2, 19, 450000.000, 'Đã hoàn thành', '2025-10-12 05:54:40', NULL),
+(62, 4, 17, 550000.000, 'Đã hoàn thành', '2025-09-22 04:33:01', NULL),
+(63, 3, 24, 490000.000, 'Đã hoàn thành', '2025-10-15 08:31:15', NULL),
+(64, 3, 27, 640000.000, 'Đã hoàn thành', '2025-09-20 04:56:18', NULL),
+(65, 4, 18, 510000.000, 'Đã hoàn thành', '2025-09-11 23:03:27', NULL),
+(67, 4, 29, 665000.000, 'Đã hoàn thành', '2025-10-16 19:25:04', NULL),
+(68, 3, 15, 510000.000, 'Đã hoàn thành', '2025-10-24 14:29:48', NULL),
+(69, 2, 31, 515000.000, 'Đã hoàn thành', '2025-09-03 08:34:41', NULL),
+(70, 3, 31, 590000.000, 'Đã hoàn thành', '2025-08-22 20:03:53', NULL),
+(71, 3, 33, 545000.000, 'Đã hoàn thành', '2025-10-30 06:37:41', NULL),
+(72, 3, 31, 740000.000, 'Đã hoàn thành', '2025-08-26 16:26:34', NULL),
+(76, 2, 25, 585000.000, 'Đã hoàn thành', '2025-10-30 05:35:56', NULL),
+(77, 4, 32, 470000.000, 'Đã hoàn thành', '2025-09-17 19:06:42', NULL),
+(78, 4, 27, 640000.000, 'Đã hoàn thành', '2025-09-03 01:28:23', NULL),
+(79, 2, 27, 415000.000, 'Đã hoàn thành', '2025-09-29 04:49:21', NULL),
+(80, 3, 35, 545000.000, 'Đã hoàn thành', '2025-10-07 13:17:23', NULL),
+(82, 3, 29, 515000.000, 'Đã hoàn thành', '2025-09-04 19:45:46', NULL),
+(83, 2, 21, 375000.000, 'Đã hoàn thành', '2025-10-19 15:51:09', NULL),
+(85, 3, 28, 475000.000, 'Đã hoàn thành', '2025-10-20 12:32:36', NULL),
+(86, 4, 20, 320000.000, 'Đã hoàn thành', '2025-09-05 18:42:26', NULL),
+(87, 3, 17, 625000.000, 'Đã hoàn thành', '2025-09-18 19:40:40', NULL),
+(88, 4, 34, 640000.000, 'Đã hoàn thành', '2025-08-06 00:14:45', NULL),
+(90, 2, 33, 395000.000, 'Đã hoàn thành', '2025-10-02 19:14:12', NULL),
+(91, 4, 29, 590000.000, 'Đã hoàn thành', '2025-09-24 15:20:27', NULL),
+(92, 4, 33, 545000.000, 'Đã hoàn thành', '2025-09-18 15:24:17', NULL),
+(94, 4, 18, 585000.000, 'Đã hoàn thành', '2025-10-11 05:47:26', NULL),
+(96, 3, 32, 620000.000, 'Đã hoàn thành', '2025-10-26 13:25:17', NULL),
+(97, 4, 22, 470000.000, 'Đã hoàn thành', '2025-09-18 22:40:33', NULL),
+(99, 3, 27, 565000.000, 'Đã hoàn thành', '2025-08-28 16:18:48', NULL),
+(100, 4, 20, 545000.000, 'Đã hoàn thành', '2025-08-05 05:08:38', NULL),
+(129, 6, 17, 975000.000, 'Đã hoàn thành', '2025-11-23 13:35:48', NULL),
+(130, 1, 17, 700000.000, 'Đang xử lý', '2025-11-23 17:22:23', 1),
+(131, 1, 17, 1050000.000, 'Đang xử lý', '2025-11-23 17:22:53', 1);
+
+-- --------------------------------------------------------
+
 --
 -- Table structure for table `genres`
 --
@@ -1182,12 +1177,19 @@ CREATE TABLE `payments` (
   `amount` decimal(10,3) NOT NULL,
   `status` enum('Đang chờ','Thành công','Thất bại') NOT NULL DEFAULT 'Đang chờ',
   `payment_method` varchar(50) DEFAULT NULL,
-  `vnp_txn_ref` varchar(64) NOT NULL,
+  `vnp_txn_ref` varchar(64) DEFAULT NULL,
   `vnp_bank_code` varchar(20) DEFAULT NULL,
   `vnp_pay_date` varchar(14) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `booking_id`, `amount`, `status`, `payment_method`, `vnp_txn_ref`, `vnp_bank_code`, `vnp_pay_date`, `created_at`, `updated_at`) VALUES
+(124, 129, 975000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-23 13:35:48', '2025-11-23 13:35:48');
 
 -- --------------------------------------------------------
 
@@ -1228,7 +1230,7 @@ INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performa
 (27, 10, 3, '2025-11-22', '18:30:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (28, 11, 1, '2025-11-16', '19:30:00', NULL, 'Đã kết thúc', 200000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (29, 11, 2, '2025-11-20', '20:00:00', NULL, 'Đã kết thúc', 220000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
-(30, 11, 1, '2025-11-23', '19:00:00', NULL, 'Đang mở bán', 200000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(30, 11, 1, '2025-11-23', '19:00:00', NULL, 'Đã kết thúc', 200000, '2025-08-01 00:00:00', '2025-11-23 13:35:03'),
 (31, 10, 3, '2025-11-25', '18:30:00', NULL, 'Đang mở bán', 220000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (32, 12, 2, '2025-11-17', '19:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (33, 12, 1, '2025-11-19', '20:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
@@ -1242,7 +1244,7 @@ INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performa
 (46, 19, 1, '2025-11-17', '18:00:00', '19:45:00', 'Đã kết thúc', 280000, '2025-11-04 13:12:33', '2025-11-22 11:47:10'),
 (47, 19, 3, '2025-11-19', '20:00:00', '21:45:00', 'Đã kết thúc', 300000, '2025-11-04 13:13:11', '2025-11-22 11:47:10'),
 (48, 19, 1, '2025-11-21', '19:30:00', '21:15:00', 'Đã kết thúc', 250000, '2025-11-04 13:13:48', '2025-11-22 11:47:10'),
-(49, 13, 1, '2025-11-23', '19:30:00', '21:05:00', 'Đang mở bán', 350000, '2025-11-04 13:41:51', '2025-11-04 13:41:51'),
+(49, 13, 1, '2025-11-23', '19:30:00', '21:05:00', 'Đã kết thúc', 350000, '2025-11-04 13:41:51', '2025-11-23 15:05:42'),
 (50, 13, 2, '2025-11-24', '20:00:00', '21:35:00', 'Đang mở bán', 300000, '2025-11-04 13:42:37', '2025-11-04 13:42:37'),
 (51, 17, 3, '2025-11-28', '19:30:00', '21:25:00', 'Đang mở bán', 350000, '2025-11-04 13:43:57', '2025-11-04 13:43:57'),
 (52, 17, 2, '2025-11-29', '20:00:00', '21:55:00', 'Đang mở bán', 280000, '2025-11-04 13:44:19', '2025-11-04 13:44:19');
@@ -1452,7 +1454,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (1, 48, 'trống'),
 (1, 49, 'trống'),
 (2, 15, 'trống'),
-(2, 17, 'trống'),
+(2, 17, 'đã đặt'),
 (2, 21, 'đã đặt'),
 (2, 24, 'trống'),
 (2, 26, 'trống'),
@@ -1595,7 +1597,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (12, 48, 'trống'),
 (12, 49, 'trống'),
 (13, 15, 'trống'),
-(13, 17, 'trống'),
+(13, 17, 'đã đặt'),
 (13, 21, 'trống'),
 (13, 24, 'đã đặt'),
 (13, 26, 'trống'),
@@ -1738,7 +1740,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (23, 48, 'trống'),
 (23, 49, 'trống'),
 (24, 15, 'trống'),
-(24, 17, 'trống'),
+(24, 17, 'đã đặt'),
 (24, 21, 'trống'),
 (24, 24, 'trống'),
 (24, 26, 'trống'),
@@ -2167,7 +2169,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (57, 35, 'đã đặt'),
 (57, 42, 'trống'),
 (57, 45, 'trống'),
-(57, 50, 'trống'),
+(57, 50, 'đã đặt'),
 (57, 52, 'trống'),
 (58, 16, 'đã đặt'),
 (58, 19, 'trống'),
@@ -2675,7 +2677,7 @@ INSERT INTO `shows` (`show_id`, `title`, `description`, `duration_minutes`, `dir
 (8, 'Đứt dây tơ chùng', 'Câu chuyện xoay quanh những giằng xé trong tình yêu, danh vọng và số phận. Sợi dây tình cảm tưởng chừng bền chặt nhưng lại mong manh trước thử thách của lòng người.', 120, 'Nguyễn Văn Khánh', 'assets/images/dut-day-to-chung-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (9, 'Gánh Cỏ Sông Hàn', 'Lấy bối cảnh miền Trung những năm sau chiến tranh, vở kịch khắc họa số phận những con người mưu sinh bên bến sông Hàn, với tình người chan chứa giữa cuộc đời đầy nhọc nhằn.', 110, 'Trần Thị Mai', 'assets/images/ganh-co-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (10, 'Làng Song Sinh', 'Một ngôi làng kỳ bí nơi những cặp song sinh liên tục chào đời. Bí mật phía sau sự trùng hợp ấy dần hé lộ, để rồi đẩy người xem vào những tình huống ly kỳ và ám ảnh.', 100, 'Lê Hoàng Nam', 'assets/images/lang-song-sinh-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(11, 'Lôi Vũ', 'Một trong những vở kịch nổi tiếng nhất thế kỷ XX, “Lôi Vũ” phơi bày những mâu thuẫn giai cấp, đạo đức và gia đình trong xã hội cũ. Vở diễn mang đến sự lay động mạnh mẽ và dư âm lâu dài.', 140, 'Phạm Quang Dũng', 'assets/images/loi-vu.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(11, 'Lôi Vũ', 'Một trong những vở kịch nổi tiếng nhất thế kỷ XX, “Lôi Vũ” phơi bày những mâu thuẫn giai cấp, đạo đức và gia đình trong xã hội cũ. Vở diễn mang đến sự lay động mạnh mẽ và dư âm lâu dài.', 140, 'Phạm Quang Dũng', 'assets/images/loi-vu.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-23 13:35:03'),
 (12, 'Ngôi Nhà Trong Mây', 'Một câu chuyện thơ mộng về tình yêu và khát vọng sống, nơi con người tìm đến “ngôi nhà trong mây” để trốn chạy thực tại. Nhưng rồi họ nhận ra: hạnh phúc thật sự chỉ đến khi dám đối diện với chính mình.', 104, 'Vũ Thảo My', 'assets/images/ngoi-nha-trong-may-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (13, 'Tấm Cám Đại Chiến', 'Phiên bản hiện đại, vui nhộn và đầy sáng tạo của truyện cổ tích “Tấm Cám”. Với yếu tố gây cười, châm biếm và bất ngờ, vở diễn mang đến những phút giây giải trí thú vị cho cả gia đình.', 95, 'Hoàng Anh Tú', 'assets/images/tam-cam-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-11-04 13:41:51'),
 (14, 'Má ơi út dìa', 'Câu chuyện cảm động về tình mẫu tử và nỗi day dứt của người con xa quê. Những ký ức, những tiếng gọi “Má ơi” trở thành sợi dây kết nối quá khứ và hiện tại.', 110, 'Nguyễn Thị Thanh Hương', 'assets/images/ma-oi-ut-dia-poster.png', 'Đã kết thúc', '2025-11-04 12:37:19', '2025-11-22 11:47:10'),
@@ -2949,7 +2951,10 @@ INSERT INTO `tickets` (`ticket_id`, `booking_id`, `seat_id`, `ticket_code`, `sta
 (185, 99, 90, 'TICK00185', 'Hợp lệ', '2025-08-28 16:18:48'),
 (186, 99, 82, 'TICK00186', 'Hợp lệ', '2025-08-28 16:18:48'),
 (187, 100, 91, 'TICK00187', 'Hợp lệ', '2025-08-05 05:08:38'),
-(188, 100, 88, 'TICK00188', 'Hợp lệ', '2025-08-05 05:08:38');
+(188, 100, 88, 'TICK00188', 'Hợp lệ', '2025-08-05 05:08:38'),
+(245, 129, 2, '311B4824', 'Đang chờ', '2025-11-23 13:35:48'),
+(246, 129, 13, '51904F68', 'Đang chờ', '2025-11-23 13:35:48'),
+(247, 129, 24, '6C42CE52', 'Đang chờ', '2025-11-23 13:35:48');
 
 -- --------------------------------------------------------
 
@@ -2978,7 +2983,7 @@ INSERT INTO `users` (`user_id`, `email`, `password`, `account_name`, `user_type`
 (2, 'trangltmt1509@gmail.com', '$2y$10$0doy81SVgcSvSwMD/VBK2OGfKf6yIVFEnCmzZYR15PjSq/yGz8p.C', 'trale', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (3, 'hoaithunguyen066@gmail.com', '$2y$10$6pjx5wsk.tW3icop/RZjWu0nMUqs61OhljS8NttNHqOxG2yP/sZdK', 'hoaithu', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (4, 'nguyenthithuytrang2020bd@gmail.com', '$2y$10$qEOSBdHhLThH6gneJ2tki.YIdoFCGM7wsBScXYAZ7sgZpDUIuLKSW', 'thuytrang', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
-(6, 'mytrangle1509@gmail.com', '$2y$10$MTCttS.vzYX2xjZlEV7H9uEwBtOHw4LkrCtgxEmGLTQzABBKTt2sK', 'thuylinh', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
+(6, 'mytrangle1509@gmail.com', '$2a$11$rQLnW9pUE37ZwSEw9dGJMOJjgfLL030/8s7WdfqamM4.nq6.HM/dW', 'trangle', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
 (7, 'admin@example.com', '$2a$11$DdN7GNbBhFyWRYFuKArD7.BfmqgzIpLYXkp7B6SgJBFnLDk5ZCmfG', 'Admin', 'Admin', 'hoạt động', 1, NULL, NULL);
 
 -- --------------------------------------------------------
@@ -3005,6 +3010,7 @@ INSERT INTO `user_detail` (`user_id`, `full_name`, `date_of_birth`, `address`, `
 (3, 'Nguyễn Hoài Thu', '2005-08-21', NULL, NULL),
 (4, 'Nguyễn Thị Thùy Trang', '2005-03-12', NULL, NULL),
 (7, 'Le My Phung', '2025-11-22', '', '');
+
 --
 -- Indexes for dumped tables
 --
@@ -3021,7 +3027,8 @@ ALTER TABLE `actors`
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`booking_id`),
   ADD KEY `user_idx` (`user_id`),
-  ADD KEY `performance_idx` (`performance_id`);
+  ADD KEY `performance_idx` (`performance_id`),
+  ADD KEY `fk_booking_user` (`created_by`);
 
 --
 -- Indexes for table `genres`
@@ -3034,7 +3041,6 @@ ALTER TABLE `genres`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
-  ADD UNIQUE KEY `unique_txn_ref` (`vnp_txn_ref`),
   ADD KEY `payment_booking_idx` (`booking_id`);
 
 --
@@ -3140,7 +3146,7 @@ ALTER TABLE `actors`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=129;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=140;
 
 --
 -- AUTO_INCREMENT for table `genres`
@@ -3152,7 +3158,7 @@ ALTER TABLE `genres`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=124;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
 
 --
 -- AUTO_INCREMENT for table `performances`
@@ -3194,7 +3200,7 @@ ALTER TABLE `theaters`
 -- AUTO_INCREMENT for table `tickets`
 --
 ALTER TABLE `tickets`
-  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=245;
+  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=249;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -3210,6 +3216,7 @@ ALTER TABLE `users`
 -- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
+  ADD CONSTRAINT `fk_booking_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`),
   ADD CONSTRAINT `performance_idx` FOREIGN KEY (`performance_id`) REFERENCES `performances` (`performance_id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `user_idx` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 

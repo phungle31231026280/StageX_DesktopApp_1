@@ -13,7 +13,7 @@ namespace StageX_DesktopApp.Models
         public int BookingId { get; set; }
 
         [Column("user_id")]
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
 
         [Column("performance_id")]
         public int PerformanceId { get; set; }
@@ -26,6 +26,12 @@ namespace StageX_DesktopApp.Models
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
+        [Column("created_by")]
+        public int? CreatedBy { get; set; }
+
+        // nếu bạn muốn navigation đến user người tạo:
+        [ForeignKey("CreatedBy")]
+        public virtual User CreatedByUser { get; set; }
 
         // Navigation Properties
         public virtual User User { get; set; }

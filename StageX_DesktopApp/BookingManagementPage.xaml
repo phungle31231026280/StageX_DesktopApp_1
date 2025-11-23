@@ -71,7 +71,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                    <TextBlock Text="Tra cứu (Mã đơn, Tên khách, SĐT):" Foreground="Gray" Margin="0,0,0,5"/>
+                    <TextBlock Text="Tra cứu:" Foreground="Gray" Margin="0,0,0,5"/>
                     <TextBox x:Name="SearchBox" KeyDown="SearchBox_KeyDown"/>
                 </StackPanel>
 
@@ -109,11 +109,11 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Mã Đơn" Binding="{Binding BookingId}" Width="80" FontWeight="Bold"/>
                 <DataGridTextColumn Header="Khách hàng" Binding="{Binding CustomerName}" Width="1.5*"/>
-                <DataGridTextColumn Header="SĐT" Binding="{Binding CustomerPhone}" Width="120"/>
+                <DataGridTextColumn Header="Người lập" Binding="{Binding CreatorName}" Width="1.2*"/>
                 <DataGridTextColumn Header="Vở diễn" Binding="{Binding ShowTitle}" Width="1.5*"/>
-                <DataGridTextColumn Header="Ngày diễn" Binding="{Binding PerformanceTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="150"/>
+                <DataGridTextColumn Header="Suất diễn" Binding="{Binding PerformanceTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="150"/>
                 <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TotalAmount, StringFormat='N0'}" Width="120" FontWeight="Bold"/>
-
+                <DataGridTextColumn Header="Ngày tạo" Binding="{Binding CreatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="160"/>
                 <DataGridTemplateColumn Header="Trạng thái" Width="150">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

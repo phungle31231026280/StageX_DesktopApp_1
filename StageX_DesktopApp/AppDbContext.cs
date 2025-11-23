@@ -52,6 +52,7 @@ namespace StageX_DesktopApp
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<User>().ToTable("users");
 
             modelBuilder.Entity<UserDetail>(entity =>
@@ -110,6 +111,11 @@ namespace StageX_DesktopApp
                .HasOne(b => b.Performance)
                .WithMany()
                .HasForeignKey(b => b.PerformanceId);
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(b => b.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull); ;
 
             modelBuilder.Entity<Ticket>()
             .HasOne(t => t.Seat)
@@ -128,6 +134,7 @@ namespace StageX_DesktopApp
             modelBuilder.Entity<PerformanceInfo>().HasNoKey().ToView(null);
             modelBuilder.Entity<AvailableSeat>().HasNoKey().ToView(null);
             modelBuilder.Entity<CreateBookingResult>().HasNoKey().ToView(null);
+            modelBuilder.Entity<CreateBookingResult>().Property<int>("booking_id");
 
             // Thực thể trạng thái ghế và top suất diễn không có khóa. Chỉ dùng để map dữ liệu từ stored procedure.
             modelBuilder.Entity<SeatStatus>().HasNoKey().ToView(null);

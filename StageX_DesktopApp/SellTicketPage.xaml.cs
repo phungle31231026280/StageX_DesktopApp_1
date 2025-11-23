@@ -619,27 +619,39 @@ namespace StageX_DesktopApp
             try
             {
                 using var context = new AppDbContext();
-                int userId = AuthSession.CurrentUser?.UserId ?? 0;
-                // tạo đơn hàng POS thông qua stored procedure, truyền tham số bằng FromSqlInterpolated để tránh lỗi SQL injection
+
+                int staffId = AuthSession.CurrentUser?.UserId ?? 0; // the currently logged-in staff
+                                                                    // Determine customer id: if the sale is for an online customer, set customerId; 
+                                                                    // for offline POS leave null (or 0 -> will be passed as null later)
+                int? customerId = null; // for POS offline
+                                        // if you have a selected customer, set customerId = selectedCustomer.Id;
+                // call stored proc -- pass customerId (nullable), performance id, total, createdBy (staff)
+                // we use FromSqlInterpolated; EF will pass null correctly when customerId is null
                 var results = await context.CreateBookingResults
-                                            .FromSqlInterpolated($"CALL proc_create_booking_pos({userId}, {selectedPerformanceId}, {total})")
-                                            .ToListAsync();
+                    .FromSqlInterpolated($@"CALL proc_create_booking_pos(
+            {customerId}, {selectedPerformanceId}, {total}, {staffId})")
+                    .ToListAsync();
+
                 int bookingId = results.FirstOrDefault()?.booking_id ?? 0;
                 if (bookingId <= 0)
                 {
                     MessageBox.Show("Không thể tạo đơn hàng.");
                     return;
                 }
-                // tạo payment
-                await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_create_payment({bookingId}, {total}, {"Thành công"}, {""}, {paymentMethod})");
-                // tạo vé cho từng ghế
+
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"CALL proc_create_payment({bookingId}, {total}, {"Thành công"}, {""}, {paymentMethod})");
+
+                // create ticket per selected seat
                 foreach (var item in billSeats)
                 {
                     string code = Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-                    await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_create_ticket({bookingId}, {item.seat_id}, {code})");
+                    await context.Database.ExecuteSqlInterpolatedAsync(
+                        $"CALL proc_create_ticket({bookingId}, {item.seat_id}, {code})");
                 }
+
                 MessageBox.Show("Đã lưu đơn hàng thành công!");
-                // refresh seats of current performance
+                // refresh seats for selected performance
                 PerformanceComboBox_SelectionChanged(null, null);
             }
             catch (Exception ex)
