@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StageX_DesktopApp.Models;
-using StageX_DesktopApp.Services;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -51,8 +50,7 @@ namespace StageX_DesktopApp
                     if (!isPasswordCorrect)
                     {
                         // GHI CHÚ: PHÁT TIẾNG LỖI
-                        SoundManager.PlayError();
-
+                        AudioHelper.Play("error.mp3");
                         ErrorTextBlock.Text = "Mật khẩu không đúng.";
                         LoginButton.IsEnabled = true;
                         return;
@@ -67,9 +65,11 @@ namespace StageX_DesktopApp
                     }
 
                     // Đăng nhập thành công
+                    
                     AuthSession.Login(user);
                     MainWindow mainWindow = new MainWindow();
                     mainWindow.Show();
+                    AudioHelper.Play("success.mp3");
                     this.Close();
                 }
             }

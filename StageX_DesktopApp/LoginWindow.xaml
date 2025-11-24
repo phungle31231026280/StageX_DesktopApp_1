@@ -19,7 +19,7 @@
         <TextBlock Text="Mật khẩu:" Margin="0,15,0,5"/>
         <PasswordBox x:Name="PasswordBox" Padding="10" FontSize="14"/>
 
-        <Button x:Name="LoginButton" Content="Đăng nhập" Margin="0,30,0,0" Padding="15" FontSize="16" FontWeight="Bold" Background="#FFffc107" Foreground="Black" Click="LoginButton_Click"/>
+        <Button x:Name="LoginButton" Content="Đăng nhập" Margin="0,30,0,0" Padding="15" FontSize="16" FontWeight="Bold" Background="#FFffc107" Foreground="Black" Click="LoginButton_Click" IsDefault="True"/>
 
         <TextBlock x:Name="ErrorTextBlock" 
                    Margin="0,15,0,0" 

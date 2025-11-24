@@ -4,7 +4,6 @@ using PdfSharp.Drawing.Layout;
 // Thư viện PDF
 using PdfSharp.Pdf;
 using StageX_DesktopApp.Models;
-using StageX_DesktopApp.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -297,6 +296,9 @@ namespace StageX_DesktopApp
 
                 document.Save(fullPath);
                 Process.Start(new ProcessStartInfo(fullPath) { UseShellExecute = true });
+
+                AudioHelper.Play("success.mp3");
+
             }
             catch (Exception ex)
             {

@@ -83,7 +83,10 @@ namespace StageX_DesktopApp
         {
             using var context = new AppDbContext();
             var data = await context.RevenueMonthlies.FromSqlRaw("CALL proc_revenue_monthly()").ToListAsync();
+
+            // Xử lý dữ liệu
             var values = new ChartValues<double>(data.Select(d => Convert.ToDouble(d.total_revenue)));
+            var labels = data.Select(d => d.month).ToArray();
 
             RevenueChart.Series = new SeriesCollection
             {
@@ -95,58 +98,57 @@ namespace StageX_DesktopApp
                     DataLabels = true
                 }
             };
-            RevenueChart.AxisX[0].Labels = data.Select(d => d.month).ToArray();
-        }
 
-        private async Task LoadOccupancyChartAsync(string filter)
-        {
-            using var context = new AppDbContext();
-            string sql = filter switch
+                    if (RevenueChart.AxisX.Count == 0) RevenueChart.AxisX.Add(new Axis());
+                    RevenueChart.AxisX[0].Labels = labels;
+
+                    if (RevenueChart.AxisY.Count == 0) RevenueChart.AxisY.Add(new Axis());
+                    RevenueChart.AxisY[0].LabelFormatter = value => value.ToString("N0");
+                }
+                private async Task LoadOccupancyChartAsync(string filter)
+                {
+                    using var context = new AppDbContext();
+                    string sql = filter switch
+                    {
+                        "month" => "CALL proc_chart_last_4_weeks()",
+                        "year" => "CALL proc_chart_last_12_months()",
+                        _ => "CALL proc_chart_last_7_days()"
+                    };
+
+                    // Lấy dữ liệu từ Stored Procedure mới (có cột unsold_tickets)
+                    var data = await context.ChartDatas.FromSqlRaw(sql).ToListAsync();
+
+                    var soldValues = new ChartValues<double>();
+                    var unsoldValues = new ChartValues<double>();
+                    var labels = new List<string>();
+
+                    foreach (var item in data)
+                    {
+                        labels.Add(item.period);
+                        soldValues.Add((double)item.sold_tickets);
+                        unsoldValues.Add((double)item.unsold_tickets);
+                    }
+
+                    OccupancyChart.Series = new SeriesCollection
             {
-                "month" => "CALL proc_chart_last_4_weeks()",
-                "year" => "CALL proc_chart_last_12_months()",
-                _ => "CALL proc_chart_last_7_days()"
+                new StackedColumnSeries
+                {
+                    Title = "Đã bán",
+                    Values = soldValues,
+                    Fill = new SolidColorBrush(Color.FromRgb(255,193,7)),
+                },
+                new StackedColumnSeries
+                {
+                    Title = "Còn trống",
+                    Values = unsoldValues,
+                    Fill = new SolidColorBrush(Color.FromRgb(60,60,60)),
+                }
             };
 
-            // Sử dụng ChartDatas (Model mới tạo) để hứng đủ 2 cột sold và unsold
-            var data = await context.ChartDatas.FromSqlRaw(sql).ToListAsync();
-
-            var soldValues = new ChartValues<double>();
-            var unsoldValues = new ChartValues<double>();
-            var labels = new List<string>();
-
-            foreach (var item in data)
-            {
-                labels.Add(item.period);
-
-                double sold = (double)item.sold_tickets;
-                double unsold = (double)item.unsold_tickets;
-
-                soldValues.Add(sold);
-                unsoldValues.Add(unsold);
-            }
-
-            OccupancyChart.Series = new SeriesCollection
-    {
-        new StackedColumnSeries
-        {
-            Title = "Đã bán",
-            Values = soldValues,
-            Fill = new SolidColorBrush(Color.FromRgb(255,193,7)),
-            DataLabels = false
-        },
-        new StackedColumnSeries
-        {
-            Title = "Còn trống",
-            Values = unsoldValues,
-            Fill = new SolidColorBrush(Color.FromRgb(60,60,60)),
-            DataLabels = false // Ẩn số liệu phần trống cho đỡ rối
-        }
-    };
-
+            if (OccupancyChart.AxisX.Count == 0) OccupancyChart.AxisX.Add(new Axis());
             OccupancyChart.AxisX[0].Labels = labels;
 
-            // Format trục Y hiển thị số nguyên (số vé)
+            if (OccupancyChart.AxisY.Count == 0) OccupancyChart.AxisY.Add(new Axis());
             OccupancyChart.AxisY[0].LabelFormatter = value => value.ToString("N0");
         }
 
@@ -350,6 +352,8 @@ namespace StageX_DesktopApp
 
                 MessageBox.Show($"Xuất PDF thành công!\n{filePath}", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                 Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+
+                AudioHelper.Play("success.mp3");
             }
             catch (Exception ex)
             {
