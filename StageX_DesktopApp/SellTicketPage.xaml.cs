@@ -88,6 +88,8 @@ namespace StageX_DesktopApp
                 selectedPeakButton = null;
                 // Nạp TOP 3 suất diễn gần nhất
                 await LoadTopPerformancesAsync();
+                SeatLegendPanel.Visibility = Visibility.Collapsed;
+                SeatLegendPanel.Children.Clear();
                 // Làm sạch QR và ô nhập tiền mặt
                 CustomerCashTextBox.Text = string.Empty;
                 ChangeTextBlock.Text = "0đ";
@@ -233,6 +235,8 @@ namespace StageX_DesktopApp
             if (selectedPerformanceId != null)
             {
                 await LoadSeatsAsync(selectedPerformanceId.Value);
+                SeatLegendPanel.Visibility = Visibility.Visible;
+                await LoadSeatLegendAsync();
             }
         }
 
@@ -264,6 +268,75 @@ namespace StageX_DesktopApp
             var shows = await context.ShowInfos.FromSqlRaw("CALL proc_active_shows()").ToListAsync();
             ShowComboBox.ItemsSource = shows;
         }
+        private async Task LoadSeatLegendAsync()
+        {
+            SeatLegendPanel.Children.Clear();
+            SeatLegendPanel.Visibility = Visibility.Collapsed;
+
+            if (selectedPerformanceId == null)
+                return;
+
+            using (var context = new AppDbContext())
+            {
+                // Lấy theater_id của suất diễn
+                var perf = await context.Performances
+                    .Where(p => p.PerformanceId == selectedPerformanceId)
+                    .Select(p => p.TheaterId)
+                    .FirstOrDefaultAsync();
+
+                if (perf == 0)
+                    return;
+
+                int theaterId = perf;
+
+                // Lấy danh sách category thực sự có ghế trong rạp đó
+                var categories = await context.Seats
+                    .Where(s => s.TheaterId == theaterId)
+                    .Include(s => s.SeatCategory)
+                    .Select(s => s.SeatCategory)
+                    .Distinct()
+                    .OrderBy(c => c.CategoryName)
+                    .ToListAsync();
+
+                if (categories.Count == 0)
+                    return;
+
+                SeatLegendPanel.Visibility = Visibility.Visible;
+
+                foreach (var cat in categories)
+                {
+                    var panel = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Margin = new Thickness(10, 0, 10, 0),
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+
+                    // Ô màu – dùng DisplayColor (đã xử lý # + fallback)
+                    var rect = new Border
+                    {
+                        Width = 22,
+                        Height = 22,
+                        CornerRadius = new CornerRadius(4),
+                        Background = cat.DisplayColor,
+                        BorderBrush = Brushes.White,
+                        BorderThickness = new Thickness(1),
+                        Margin = new Thickness(0, 0, 5, 0)
+                    };
+
+                    var text = new TextBlock
+                    {
+                        Text = $"{cat.CategoryName} (+{cat.BasePrice:N0}đ)",
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+
+                    panel.Children.Add(rect);
+                    panel.Children.Add(text);
+
+                    SeatLegendPanel.Children.Add(panel);
+                }
+            }
+        }
 
         /// <summary>
         /// Khi chọn vở diễn: xoá thông tin cũ, đặt SelectedShowText và nạp danh sách suất chiếu.
@@ -283,6 +356,8 @@ namespace StageX_DesktopApp
             billSeats.Clear();
             BuildSeatMap();
             UpdateTotal();
+            SeatLegendPanel.Visibility = Visibility.Collapsed;
+            SeatLegendPanel.Children.Clear();
             if (selectedShow == null) return;
             using var context = new AppDbContext();
             // Gọi stored procedure với tham số thông qua FromSqlInterpolated để tránh SQL injection
@@ -320,6 +395,8 @@ namespace StageX_DesktopApp
             if (selectedPerformanceId == null) return;
             // Nạp sơ đồ ghế đầy đủ (kể cả ghế đã bán)
             await LoadSeatsAsync(selectedPerformanceId.Value);
+            SeatLegendPanel.Visibility = Visibility.Visible;
+            await LoadSeatLegendAsync();
         }
 
         /// <summary>
