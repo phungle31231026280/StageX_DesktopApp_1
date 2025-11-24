@@ -49,7 +49,7 @@ namespace StageX_DesktopApp
         public DbSet<SeatStatus> SeatStatuses { get; set; }
         // Dữ liệu top 3 suất diễn mở bán/đang diễn cho chế độ Giờ cao điểm
         public DbSet<PeakPerformanceInfo> PeakPerformanceInfos { get; set; }
-
+        public DbSet<ChartDataModel> ChartDatas { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -149,6 +149,8 @@ namespace StageX_DesktopApp
                     j => j.HasOne<Actor>().WithMany().HasForeignKey("actor_id"),
                     j => j.HasOne<Show>().WithMany().HasForeignKey("show_id")
                 );
+
+            modelBuilder.Entity<ChartDataModel>().HasNoKey();
         }
     }
 }
