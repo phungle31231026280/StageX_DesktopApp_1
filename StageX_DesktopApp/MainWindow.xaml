@@ -51,7 +51,7 @@
                            Margin="20"
                            TextAlignment="Center"/>
 
-                <Button x:Name="NavDashboard" Content="Bảng điều khiển" Click="NavDashboard_Click" Style="{StaticResource MenuButtonStyle}"/>
+                <Button x:Name="NavDashboard" Content="Báo cáo thống kê" Click="NavDashboard_Click" Style="{StaticResource MenuButtonStyle}"/>
 
                 <Button x:Name="NavPerformanceMgmt" Content="Quản lý Suất diễn" Click="NavPerformanceMgmt_Click" Style="{StaticResource MenuButtonStyle}"/>
 

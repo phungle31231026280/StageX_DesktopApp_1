@@ -9,30 +9,64 @@
         <Style x:Key="ButtonAddStyle" TargetType="Button">
             <Setter Property="Background" Value="#FF198754"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Padding" Value="15,8"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
         <Style x:Key="ButtonEditStyle" TargetType="Button">
             <Setter Property="Background" Value="#FF0D6EFD"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Padding" Value="15,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="ButtonDeleteStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FFDC3545"/>
+
+        <Style x:Key="ButtonGrayStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF6c757d"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Padding" Value="10"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Background" Value="#FF333333"/>
+            <Setter Property="Background" Value="#FF1A1A1A"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderBrush" Value="#FF333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
     </Page.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="25">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -42,35 +76,45 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.2*"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="#FF0C1220" CornerRadius="8" Padding="20" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="Thêm / Sửa Diễn viên" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <TextBlock Text="THÔNG TIN DIỄN VIÊN" FontSize="16" FontWeight="Bold" Margin="0,0,0,20" Foreground="#FFffc107"/>
                     <TextBox x:Name="ActorIdBox" Visibility="Collapsed"/>
 
-                    <TextBlock Text="Họ và Tên:" Foreground="Gray" Margin="0,0,0,5"/>
-                    <TextBox x:Name="FullNameBox"/>
+                    <TextBlock Text="Họ và Tên:" Foreground="Gray" Margin="0,0,0,8"/>
+                    <TextBox x:Name="FullNameBox" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Nghệ danh (Nick name):" Foreground="Gray" Margin="0,10,0,5"/>
-                    <TextBox x:Name="NickNameBox"/>
+                    <TextBlock Text="Nghệ danh (Nick name):" Foreground="Gray" Margin="0,0,0,8"/>
+                    <TextBox x:Name="NickNameBox" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Link Ảnh (Avatar URL):" Foreground="Gray" Margin="0,10,0,5"/>
-                    <TextBox x:Name="AvatarUrlBox"/>
-                    <Image x:Name="PreviewImage" Height="100" Width="100" Margin="0,10,0,0" HorizontalAlignment="Left" Stretch="UniformToFill"/>
+                    <TextBlock Text="Link Ảnh (Avatar URL):" Foreground="Gray" Margin="0,0,0,8"/>
+                    <TextBox x:Name="AvatarUrlBox" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Trạng thái:" Foreground="Gray" Margin="0,10,0,5"/>
-                    <ComboBox x:Name="StatusComboBox" Padding="8" SelectedIndex="0">
-                        <ComboBoxItem Content="Hoạt động"/>
-                        <ComboBoxItem Content="Ngừng hoạt động"/>
+                    <Image x:Name="PreviewImage" 
+                           Source="{Binding Text, ElementName=AvatarUrlBox}"
+                           Width="120" Height="120" 
+                           Stretch="UniformToFill" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,15">
+                        <Image.Clip>
+                            <EllipseGeometry Center="60,60" RadiusX="60" RadiusY="60"/>
+                        </Image.Clip>
+                    </Image>
+
+                    <TextBlock Text="Trạng thái:" Foreground="Gray" Margin="0,0,0,8"/>
+                    <ComboBox x:Name="StatusComboBox" Padding="10" Height="40" Background="#FF1A1A1A" Foreground="White" BorderBrush="#333">
+                        <ComboBoxItem Content="Hoạt động" Foreground="Black"/>
+                        <ComboBoxItem Content="Ngừng hoạt động" Foreground="Black"/>
                     </ComboBox>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                        <Button x:Name="SaveButton" Content="Lưu Diễn viên" Style="{StaticResource ButtonAddStyle}" Click="SaveButton_Click"/>
-                        <Button x:Name="ClearButton" Content="Hủy" Background="Gray" Foreground="White" Padding="10,5" Margin="10,0,0,0" Click="ClearButton_Click"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,25,0,0" HorizontalAlignment="Center">
+                        <Button x:Name="SaveButton" Content="Lưu" Style="{StaticResource ButtonAddStyle}" Click="SaveButton_Click" Width="100" Height="38"/>
+                        <Button x:Name="ClearButton" Content="Hủy" Style="{StaticResource ButtonGrayStyle}" Margin="15,0,0,0" Click="ClearButton_Click" Width="100" Height="38"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -81,30 +125,62 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                    <TextBox x:Name="SearchBox" Width="250" Tag="Tìm theo tên..." KeyUp="SearchBox_KeyUp"/>
-                    <Button Content="Tìm kiếm" Background="#FF0D6EFD" Foreground="White" Padding="10,5" Margin="10,0,0,0" Click="SearchButton_Click"/>
-                </StackPanel>
+                <Border Grid.Row="0" Background="#FF0C1220" CornerRadius="8" Padding="10" Margin="0,0,0,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Tag="Tìm theo tên..." KeyUp="SearchBox_KeyUp" Margin="0,0,10,0" VerticalContentAlignment="Center" Height="38"/>
+                        <Button Grid.Column="1" Content="Tìm kiếm" Style="{StaticResource ButtonEditStyle}" Click="SearchButton_Click" Width="100" Height="38"/>
+                    </Grid>
+                </Border>
 
                 <DataGrid Grid.Row="1" x:Name="ActorsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                          Background="Transparent" RowBackground="#FF1E1E1E" Foreground="White" HeadersVisibility="Column"
-                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333">
-                    <DataGrid.Resources>
+                          Background="Transparent" RowBackground="Transparent" Foreground="White" 
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+                          RowHeaderWidth="0" BorderThickness="0">
+
+                    <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="Black"/>
-                            <Setter Property="Foreground" Value="White"/>
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Foreground" Value="#FFffc107"/>
+                            <Setter Property="Padding" Value="10,12"/>
                             <Setter Property="FontSize" Value="14"/>
                             <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Left"/>
                         </Style>
-                    </DataGrid.Resources>
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding ActorId}" Width="50"/>
+                    </DataGrid.ColumnHeaderStyle>
 
-                        <DataGridTemplateColumn Header="Avatar" Width="70">
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="10"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#333"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.CellStyle>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding ActorId}" Width="60"/>
+
+                        <DataGridTemplateColumn Header="AVATAR" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Image Source="{Binding AvatarUrl}" Width="40" Height="40" Stretch="UniformToFill">
+                                    <Image Source="{Binding AvatarUrl}" Width="40" Height="40" Stretch="UniformToFill" HorizontalAlignment="Left">
                                         <Image.Clip>
                                             <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
                                         </Image.Clip>
@@ -113,15 +189,35 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="Họ Tên" Binding="{Binding FullName}" Width="*"/>
-                        <DataGridTextColumn Header="Nghệ danh" Binding="{Binding NickName}" Width="*"/>
-                        <DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="Auto"/>
+                        <DataGridTextColumn Header="HỌ TÊN" Binding="{Binding FullName}" Width="1.5*"/>
+                        <DataGridTextColumn Header="NGHỆ DANH" Binding="{Binding NickName}" Width="*"/>
 
-                        <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                        <DataGridTemplateColumn Header="TRẠNG THÁI" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="Sửa" Style="{StaticResource ButtonEditStyle}" Margin="0,0,5,0" Click="EditButton_Click"/>
+                                    <TextBlock Text="{Binding Status}" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Hoạt động">
+                                                        <Setter Property="Foreground" Value="#FF198754"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Ngừng hoạt động">
+                                                        <Setter Property="Foreground" Value="Gray"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Button Content="Sửa" Style="{StaticResource ButtonEditStyle}" Click="EditButton_Click" Width="70" Height="38"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

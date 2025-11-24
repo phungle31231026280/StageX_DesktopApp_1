@@ -36,7 +36,6 @@ namespace StageX_DesktopApp
         public DashboardPage()
         {
             InitializeComponent();
-            ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
             RevenueFormatter = value => value.ToString("N0");
             DataContext = this;
             GlobalFontSettings.UseWindowsFontsUnderWindows = true;
@@ -361,90 +360,6 @@ namespace StageX_DesktopApp
             }
         }
 
-        // HÀM CHỤP ẢNH MÀ KHÔNG LÀM HỎNG LAYOUT APP (SIÊU ỔN ĐỊNH!)
-
-
-        // ==============================================================================
-        //  XUẤT EXCEL – ĐẸP NHƯ APP, KHÔNG LỖI
-        // ==============================================================================
-        private async void BtnExportExcel_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    $"BaoCao_StageX_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
-
-                // Sử dụng FileInfo cho EPPlus
-                var fileInfo = new FileInfo(filePath);
-
-                using (var package = new ExcelPackage(fileInfo))
-                {
-                    ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
-
-                    // Xóa sheet cũ nếu trùng tên (dù tên file có timestamp nhưng cứ an toàn)
-                    var sheet = package.Workbook.Worksheets.Add("Dashboard");
-
-                    // --- PHẦN CODE TIÊU ĐỀ & KPI GIỮ NGUYÊN ---
-                    sheet.Cells["A1"].Value = "BÁO CÁO TỔNG QUAN STAGEX";
-                    sheet.Cells["A1:K1"].Merge = true;
-                    sheet.Cells["A1"].Style.Font.Size = 20;
-                    sheet.Cells["A1"].Style.Font.Bold = true;
-                    sheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-
-                    sheet.Cells["A2"].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}";
-                    sheet.Cells["A2:K2"].Merge = true;
-
-                    sheet.Cells["A4"].Value = "Tổng doanh thu"; sheet.Cells["B4"].Value = RevenueTotalText.Text;
-                    sheet.Cells["D4"].Value = "Đơn hàng"; sheet.Cells["E4"].Value = OrderTotalText.Text;
-                    sheet.Cells["G4"].Value = "Vở diễn"; sheet.Cells["H4"].Value = ShowTotalText.Text;
-                    sheet.Cells["J4"].Value = "Thể loại"; sheet.Cells["K4"].Value = GenreTotalText.Text;
-
-                    // --- PHẦN XUẤT ẢNH ---
-                    var excelChartList = new List<object>
-            {
-                new { Control = RevenueChart,   Width = 950,  Height = 500 },
-                new { Control = OccupancyChart, Width = 900,  Height = 450 },
-                new { Control = ShowPieChart,   Width = 700,  Height = 560 } // PieChart sẽ hiện do đã tắt animation
-            };
-
-                    int currentRow = 7;
-
-                    foreach (var item in excelChartList)
-                    {
-                        var control = (UIElement)item.GetType().GetProperty("Control").GetValue(item);
-                        int w = (int)item.GetType().GetProperty("Width").GetValue(item);
-                        int h = (int)item.GetType().GetProperty("Height").GetValue(item);
-
-                        // Chờ layout update 1 chút để đảm bảo thread UI đã vẽ xong
-                        await Task.Delay(100);
-
-                        var bmp = CaptureChart(control, w, h);
-                        var pic = sheet.Drawings.AddPicture("Chart_" + currentRow, BitmapToStream(bmp));
-                        pic.SetPosition(currentRow, 0, 0, 0);
-                        pic.SetSize(w, h);
-
-                        currentRow += 32;
-                    }
-
-                    // Bảng Top 5 vở diễn
-                    // Tăng chiều cao lên một chút để không bị mất dòng cuối
-                    await Task.Delay(100);
-                    var top5Bmp = CaptureChart(TopShowsGrid, 750, 300);
-                    var top5Pic = sheet.Drawings.AddPicture("Top5Table", BitmapToStream(top5Bmp));
-                    top5Pic.SetPosition(currentRow, 0, 0, 0);
-
-                    // [QUAN TRỌNG] LƯU FILE
-                    package.Save();
-                }
-
-                MessageBox.Show($"Xuất Excel thành công!\n{filePath}", "Thành công", MessageBoxButton.OK);
-                Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi xuất Excel: " + ex.Message);
-            }
-        }
     }
 }
 
