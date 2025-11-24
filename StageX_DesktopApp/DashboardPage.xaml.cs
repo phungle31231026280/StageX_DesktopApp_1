@@ -108,27 +108,46 @@ namespace StageX_DesktopApp
                 _ => "CALL proc_chart_last_7_days()"
             };
 
-            var soldData = await context.TicketSolds.FromSqlRaw(sql).ToListAsync();
+            // Sử dụng ChartDatas (Model mới tạo) để hứng đủ 2 cột sold và unsold
+            var data = await context.ChartDatas.FromSqlRaw(sql).ToListAsync();
 
             var soldValues = new ChartValues<double>();
             var unsoldValues = new ChartValues<double>();
             var labels = new List<string>();
 
-            foreach (var item in soldData)
+            foreach (var item in data)
             {
                 labels.Add(item.period);
-                double sold = Convert.ToDouble(item.sold_tickets);
-                double unsold = sold * 0.3; // giả lập
+
+                double sold = (double)item.sold_tickets;
+                double unsold = (double)item.unsold_tickets;
+
                 soldValues.Add(sold);
                 unsoldValues.Add(unsold);
             }
 
             OccupancyChart.Series = new SeriesCollection
-            {
-                new StackedColumnSeries { Title = "Đã bán", Values = soldValues, Fill = new SolidColorBrush(Color.FromRgb(255,193,7)), DataLabels = true },
-                new StackedColumnSeries { Title = "Còn trống", Values = unsoldValues, Fill = new SolidColorBrush(Color.FromRgb(60,60,60)), DataLabels = true }
-            };
+    {
+        new StackedColumnSeries
+        {
+            Title = "Đã bán",
+            Values = soldValues,
+            Fill = new SolidColorBrush(Color.FromRgb(255,193,7)),
+            DataLabels = false
+        },
+        new StackedColumnSeries
+        {
+            Title = "Còn trống",
+            Values = unsoldValues,
+            Fill = new SolidColorBrush(Color.FromRgb(60,60,60)),
+            DataLabels = false // Ẩn số liệu phần trống cho đỡ rối
+        }
+    };
+
             OccupancyChart.AxisX[0].Labels = labels;
+
+            // Format trục Y hiển thị số nguyên (số vé)
+            OccupancyChart.AxisY[0].LabelFormatter = value => value.ToString("N0");
         }
 
         private async Task LoadShowPieChartAsync()

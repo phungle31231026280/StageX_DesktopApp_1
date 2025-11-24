@@ -40,4 +40,11 @@ namespace StageX_DesktopApp.Models
         public int star { get; set; }
         public long rating_count { get; set; }
     }
+    public class ChartDataModel
+    {
+        public string period { get; set; }
+        public long sold_tickets { get; set; }
+        public long unsold_tickets { get; set; } // Thêm cột này để hứng dữ liệu thật
+    }
+
 }
