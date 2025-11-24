@@ -147,6 +147,10 @@ namespace StageX_DesktopApp
                 });
             }
             ShowPieChart.Series = series;
+
+            // [QUAN TRỌNG] Tắt Animation để chụp ảnh không bị mất hình
+            ShowPieChart.DisableAnimations = true;
+            ShowPieChart.Hoverable = false;
         }
 
         private async Task LoadTopShowsAsync()
@@ -172,17 +176,54 @@ namespace StageX_DesktopApp
         // ==============================================================================
         //  HÀM CHỤP ẢNH LIVECHARTS – ĐÃ SỬA HOÀN TOÀN KHÔNG LỖI
         // ==============================================================================
+        // Hàm chụp ảnh "cưỡng chế" - Đảm bảo hình ảnh luôn hiển thị đủ
         private BitmapSource CaptureChart(UIElement element, int width, int height)
         {
-            element.Measure(new Size(width, height));
-            element.Arrange(new Rect(new Size(width, height)));
+            // 1. Tắt Animation nếu là biểu đồ LiveCharts (để hình hiện ra ngay lập tức)
+            if (element is LiveCharts.Wpf.Charts.Base.Chart chart)
+            {
+                chart.DisableAnimations = true;
+                chart.Hoverable = false;
+                chart.DataTooltip = null;
+            }
+
+            // 2. Lưu lại trạng thái nền cũ
+            var originalBrush = (element as Control)?.Background;
+
+            // 3. Set nền đệm để ảnh không bị trong suốt (gây đen hình)
+            // Nếu app bạn nền đen, hãy để Brushes.Black. Nếu muốn báo cáo nền trắng, để Brushes.White
+            if (element is Control control)
+            {
+                // Ở đây tôi set màu đen cho khớp với báo cáo PDF của bạn
+                control.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
+            }
+
+            // 4. Ép buộc tính toán lại giao diện theo kích thước mong muốn
+            var size = new Size(width, height);
+            element.Measure(size);
+            element.Arrange(new Rect(size));
             element.UpdateLayout();
 
+            // 5. Render ra ảnh
             var bmp = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
             bmp.Render(element);
+
+            // 6. Trả lại trạng thái cũ cho App (để người dùng không thấy bị giật)
+            if (element is Control ctrl)
+            {
+                ctrl.Background = originalBrush;
+                ctrl.InvalidateMeasure();
+            }
+
+            // Bật lại animation (nếu cần)
+            if (element is LiveCharts.Wpf.Charts.Base.Chart chartRevert)
+            {
+                chartRevert.DisableAnimations = false;
+                chartRevert.Hoverable = true;
+            }
+
             return bmp;
         }
-
         private MemoryStream BitmapToStream(BitmapSource bmp)
         {
             var stream = new MemoryStream();
@@ -205,7 +246,7 @@ namespace StageX_DesktopApp
         // ==============================================================================
         //  XUẤT PDF – HOÀN HẢO, KHÔNG LỖI
         // ==============================================================================
-        private void BtnExportPdf_Click(object sender, RoutedEventArgs e)
+        private async void BtnExportPdf_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -213,58 +254,92 @@ namespace StageX_DesktopApp
                     $"BaoCao_StageX_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
 
                 var doc = new PdfDocument();
-                doc.Info.Title = "Báo cáo StageX";
+                doc.Info.Title = "Báo cáo Dashboard StageX";
+
                 PdfPage page = doc.AddPage();
+                page.Width = XUnit.FromMillimeter(297); // Khổ ngang (A4 Landscape)
+                page.Height = XUnit.FromMillimeter(210);
+
                 XGraphics gfx = XGraphics.FromPdfPage(page);
 
-                XFont fTitle = new XFont("Arial", 22);
-                XFont fHeader = new XFont("Arial", 14);
-                XFont fNormal = new XFont("Arial", 11);
+                // Vẽ nền đen cho PDF (giống ảnh bạn gửi)
+                gfx.DrawRectangle(XBrushes.Black, 0, 0, page.Width, page.Height);
 
-                double y = 40;
-                double margin = 50;
+                var options = new XPdfFontOptions(PdfFontEncoding.Unicode);
+                XFont fTitle = new XFont("Arial", 24);
+                XFont fHeader = new XFont("Arial", 16);
+                XFont fNormal = new XFont("Arial", 12);
 
-                gfx.DrawString("BÁO CÁO TỔNG QUAN STAGEX", fTitle, XBrushes.DarkBlue,
-                    new XRect(0, y, page.Width, 50), XStringFormats.TopCenter);
-                y += 70;
+                double margin = 40;
+                double y = 30;
 
-                // KPI + 3 biểu đồ + bảng
-                var items = new (UIElement Chart, string Title, int Width, int Height)[]
-{
-    (RevenueChart,   "DOANH THU THEO THÁNG",             800, 400),
-    (OccupancyChart, "TÌNH TRẠNG VÉ",                     750, 380),
-    (ShowPieChart,   "TOP 5 VỞ DIỄN – TỶ LỆ VÉ BÁN",      600, 480),
-    (TopShowsGrid,   "CHI TIẾT TOP 5 VỞ DIỄN",            700, 220)
-};
+                // --- 1. TIÊU ĐỀ ---
+                gfx.DrawString("BÁO CÁO TỔNG QUAN STAGEX", fTitle, XBrushes.White,
+                    new XRect(0, y, page.Width, 40), XStringFormats.TopCenter);
+                y += 40;
 
-                foreach (var (Chart, Title, Width, Height) in items)
-                {
-                    if (y + Height + 80 > page.Height)
-                    {
-                        page = doc.AddPage();
-                        gfx = XGraphics.FromPdfPage(page);
-                        y = 40;
-                    }
+                gfx.DrawString($"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}", fNormal, XBrushes.LightGray,
+                    new XRect(0, y, page.Width, 20), XStringFormats.TopCenter);
+                y += 40;
 
-                    gfx.DrawString(Title, fHeader, XBrushes.Black, margin, y);
-                    y += 35;
+                // --- 2. KPI SUMMARY ---
+                string kpi = $"DOANH THU: {RevenueTotalText.Text}  |  ĐƠN: {OrderTotalText.Text}  |  VỞ DIỄN: {ShowTotalText.Text}  |  THỂ LOẠI: {GenreTotalText.Text}";
+                gfx.DrawString(kpi, fHeader, XBrushes.Yellow,
+                    new XRect(0, y, page.Width, 30), XStringFormats.TopCenter);
+                y += 50;
 
-                    var img = CaptureChart(Chart, Width, Height);
-                    gfx.DrawImage(BitmapToXImage(img), margin, y, Width, Height);
-                    y += Height + 50;
-                }
+                // --- 3. VẼ BIỂU ĐỒ (Sử dụng CaptureChart thay vì VisualBrush) ---
 
+                // Cấu hình vị trí cột trái và phải
+                double col1_X = margin;
+                double col2_X = page.Width / 2 + 10;
+                double chartWidth = (page.Width / 2) - margin - 20; // Chia đôi chiều rộng trang
+                double chartHeight = 250; // Chiều cao mỗi biểu đồ
+
+                double yCurrent = y;
+
+                // >> BIỂU ĐỒ 1: DOANH THU (Cột trái)
+                gfx.DrawString("DOANH THU THEO THÁNG", fHeader, XBrushes.Cyan, col1_X, yCurrent);
+                // Chờ 1 chút để UI thread kịp xử lý
+                await Task.Delay(50);
+                var imgRevenue = BitmapToXImage(CaptureChart(RevenueChart, (int)chartWidth * 2, (int)chartHeight * 2)); // Render x2 cho nét
+                gfx.DrawImage(imgRevenue, col1_X, yCurrent + 25, chartWidth, chartHeight);
+
+                // >> BIỂU ĐỒ 2: TÌNH TRẠNG VÉ (Cột phải)
+                gfx.DrawString("TÌNH TRẠNG VÉ", fHeader, XBrushes.Cyan, col2_X, yCurrent);
+                var imgOccupancy = BitmapToXImage(CaptureChart(OccupancyChart, (int)chartWidth * 2, (int)chartHeight * 2));
+                gfx.DrawImage(imgOccupancy, col2_X, yCurrent + 25, chartWidth, chartHeight);
+
+                // Tăng Y để xuống dòng vẽ hàng tiếp theo
+                yCurrent += chartHeight + 60;
+
+                // >> BIỂU ĐỒ 3: PIE CHART (Cột trái)
+                gfx.DrawString("TỶ LỆ VÉ THEO VỞ DIỄN", fHeader, XBrushes.Cyan, col1_X, yCurrent);
+                // Pie Chart cần hình vuông nên ta chỉnh size phù hợp
+                var imgPie = BitmapToXImage(CaptureChart(ShowPieChart, 500, 500));
+                gfx.DrawImage(imgPie, col1_X + 40, yCurrent + 25, chartHeight, chartHeight); // Căn giữa cột trái
+
+                // >> BẢNG TOP 5 (Cột phải)
+                gfx.DrawString("TOP 5 VỞ DIỄN", fHeader, XBrushes.Cyan, col2_X, yCurrent);
+                // Top 5 cần chiều cao tùy thuộc số dòng, ta set cứng khoảng 300px
+                var imgTop5 = BitmapToXImage(CaptureChart(TopShowsGrid, (int)chartWidth * 2, 400));
+                gfx.DrawImage(imgTop5, col2_X, yCurrent + 25, chartWidth, 200); // Scale lại vào PDF
+
+                // --- 4. LƯU FILE ---
                 doc.Save(filePath);
                 doc.Close();
 
-                MessageBox.Show($"Xuất PDF thành công!\n{filePath}", "Thành công", MessageBoxButton.OK);
+                MessageBox.Show($"Xuất PDF thành công!\n{filePath}", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                 Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi xuất PDF: " + ex.Message + "\n" + ex.StackTrace);
+                MessageBox.Show("Lỗi: " + ex.Message);
             }
         }
+
+        // HÀM CHỤP ẢNH MÀ KHÔNG LÀM HỎNG LAYOUT APP (SIÊU ỔN ĐỊNH!)
+
 
         // ==============================================================================
         //  XUẤT EXCEL – ĐẸP NHƯ APP, KHÔNG LỖI
@@ -276,59 +351,68 @@ namespace StageX_DesktopApp
                 string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                     $"BaoCao_StageX_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
-                using var package = new ExcelPackage();
-                ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
+                // Sử dụng FileInfo cho EPPlus
+                var fileInfo = new FileInfo(filePath);
 
-                var sheet = package.Workbook.Worksheets.Add("Dashboard");
-
-                // Tiêu đề
-                sheet.Cells["A1"].Value = "BÁO CÁO TỔNG QUAN STAGEX";
-                sheet.Cells["A1:K1"].Merge = true;
-                sheet.Cells["A1"].Style.Font.Size = 20;
-                sheet.Cells["A1"].Style.Font.Bold = true;
-                sheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-
-                sheet.Cells["A2"].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}";
-                sheet.Cells["A2:K2"].Merge = true;
-
-                // KPI
-                sheet.Cells["A4"].Value = "Tổng doanh thu"; sheet.Cells["B4"].Value = RevenueTotalText.Text;
-                sheet.Cells["D4"].Value = "Đơn hàng"; sheet.Cells["E4"].Value = OrderTotalText.Text;
-                sheet.Cells["G4"].Value = "Vở diễn"; sheet.Cells["H4"].Value = ShowTotalText.Text;
-                sheet.Cells["J4"].Value = "Thể loại"; sheet.Cells["K4"].Value = GenreTotalText.Text;
-
-                int row = 7;
-
-                // 3 biểu đồ giống hệt app
-                var excelChartList = new List<object>
-{
-    new { Control = RevenueChart,   Width = 950,  Height = 500 },
-    new { Control = OccupancyChart, Width = 900,  Height = 450 },
-    new { Control = ShowPieChart,   Width = 700,  Height = 560 }
-};
-
-                int currentRow = 7;  // đổi tên biến để không trùng với "row" ở chỗ khác (fix CS0128)
-
-                foreach (var item in excelChartList)
+                using (var package = new ExcelPackage(fileInfo))
                 {
-                    var control = (UIElement)item.GetType().GetProperty("Control").GetValue(item);
-                    int w = (int)item.GetType().GetProperty("Width").GetValue(item);
-                    int h = (int)item.GetType().GetProperty("Height").GetValue(item);
+                    ExcelPackage.License.SetNonCommercialPersonal("<Your Name>");
 
-                    var bmp = CaptureChart(control, w, h);
-                    var pic = sheet.Drawings.AddPicture("Chart_" + currentRow, BitmapToStream(bmp));
-                    pic.SetPosition(currentRow, 0, 0, 0);
-                    pic.SetSize(w, h);
+                    // Xóa sheet cũ nếu trùng tên (dù tên file có timestamp nhưng cứ an toàn)
+                    var sheet = package.Workbook.Worksheets.Add("Dashboard");
 
-                    currentRow += 32; // khoảng cách giữa các biểu đồ
+                    // --- PHẦN CODE TIÊU ĐỀ & KPI GIỮ NGUYÊN ---
+                    sheet.Cells["A1"].Value = "BÁO CÁO TỔNG QUAN STAGEX";
+                    sheet.Cells["A1:K1"].Merge = true;
+                    sheet.Cells["A1"].Style.Font.Size = 20;
+                    sheet.Cells["A1"].Style.Font.Bold = true;
+                    sheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                    sheet.Cells["A2"].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}";
+                    sheet.Cells["A2:K2"].Merge = true;
+
+                    sheet.Cells["A4"].Value = "Tổng doanh thu"; sheet.Cells["B4"].Value = RevenueTotalText.Text;
+                    sheet.Cells["D4"].Value = "Đơn hàng"; sheet.Cells["E4"].Value = OrderTotalText.Text;
+                    sheet.Cells["G4"].Value = "Vở diễn"; sheet.Cells["H4"].Value = ShowTotalText.Text;
+                    sheet.Cells["J4"].Value = "Thể loại"; sheet.Cells["K4"].Value = GenreTotalText.Text;
+
+                    // --- PHẦN XUẤT ẢNH ---
+                    var excelChartList = new List<object>
+            {
+                new { Control = RevenueChart,   Width = 950,  Height = 500 },
+                new { Control = OccupancyChart, Width = 900,  Height = 450 },
+                new { Control = ShowPieChart,   Width = 700,  Height = 560 } // PieChart sẽ hiện do đã tắt animation
+            };
+
+                    int currentRow = 7;
+
+                    foreach (var item in excelChartList)
+                    {
+                        var control = (UIElement)item.GetType().GetProperty("Control").GetValue(item);
+                        int w = (int)item.GetType().GetProperty("Width").GetValue(item);
+                        int h = (int)item.GetType().GetProperty("Height").GetValue(item);
+
+                        // Chờ layout update 1 chút để đảm bảo thread UI đã vẽ xong
+                        await Task.Delay(100);
+
+                        var bmp = CaptureChart(control, w, h);
+                        var pic = sheet.Drawings.AddPicture("Chart_" + currentRow, BitmapToStream(bmp));
+                        pic.SetPosition(currentRow, 0, 0, 0);
+                        pic.SetSize(w, h);
+
+                        currentRow += 32;
+                    }
+
+                    // Bảng Top 5 vở diễn
+                    // Tăng chiều cao lên một chút để không bị mất dòng cuối
+                    await Task.Delay(100);
+                    var top5Bmp = CaptureChart(TopShowsGrid, 750, 300);
+                    var top5Pic = sheet.Drawings.AddPicture("Top5Table", BitmapToStream(top5Bmp));
+                    top5Pic.SetPosition(currentRow, 0, 0, 0);
+
+                    // [QUAN TRỌNG] LƯU FILE
+                    package.Save();
                 }
-
-                // Bảng Top 5 vở diễn
-                var top5Bmp = CaptureChart(TopShowsGrid, 750, 250);
-                var top5Pic = sheet.Drawings.AddPicture("Top5Table", BitmapToStream(top5Bmp));
-                top5Pic.SetPosition(currentRow, 0, 0, 0);
-
-
 
                 MessageBox.Show($"Xuất Excel thành công!\n{filePath}", "Thành công", MessageBoxButton.OK);
                 Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
@@ -340,3 +424,4 @@ namespace StageX_DesktopApp
         }
     }
 }
+
