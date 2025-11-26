@@ -88,9 +88,9 @@
                         <TextBlock Text="Doanh thu theo tháng" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" Margin="0,0,0,10"/>
                         <lvc:CartesianChart x:Name="RevenueChart" Grid.Row="1" Background="Transparent" LegendLocation="None">
                             <lvc:CartesianChart.AxisX>
-                                <lvc:Axis LabelsRotation="15">
+                                <lvc:Axis LabelsRotation="0">
                                     <lvc:Axis.Separator>
-                                        <lvc:Separator Step="1" StrokeThickness="0"/>
+                                        <lvc:Separator StrokeThickness="0"/>
                                     </lvc:Axis.Separator>
                                 </lvc:Axis>
                             </lvc:CartesianChart.AxisX>
@@ -115,7 +115,7 @@
                             <RadioButton x:Name="YearFilterButton" Content="Năm" GroupName="Filter" Foreground="White" Checked="FilterChanged"/>
                         </StackPanel>
 
-                        <lvc:CartesianChart x:Name="OccupancyChart" Grid.Row="2" LegendLocation="Bottom" Background="Transparent">
+                        <lvc:CartesianChart x:Name="OccupancyChart" Grid.Row="2" LegendLocation="Bottom" Background="Transparent" DataClick="OccupancyChart_DataClick">
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis LabelsRotation="0">
                                     <lvc:Axis.Separator>

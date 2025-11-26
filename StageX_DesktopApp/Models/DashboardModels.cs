@@ -44,7 +44,7 @@ namespace StageX_DesktopApp.Models
     {
         public string period { get; set; }
         public long sold_tickets { get; set; }
-        public long unsold_tickets { get; set; } // Thêm cột này để hứng dữ liệu thật
+        public long unsold_tickets { get; set; } 
     }
 
 }
