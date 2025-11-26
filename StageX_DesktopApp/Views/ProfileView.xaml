@@ -32,7 +32,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Hồ sơ cá nhân" FontSize="24" FontWeight="Bold" Foreground="White" Margin="0,0,0,20"/>
+        <TextBlock Grid.Row="0" Text="Hồ sơ cá nhân" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,20"/>
 
         <Border Grid.Row="1" Background="#FF0C1220" CornerRadius="8" Padding="20">
             <StackPanel Orientation="Horizontal">

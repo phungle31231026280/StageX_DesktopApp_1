@@ -59,10 +59,10 @@
         </Style>
 
         <Style TargetType="ComboBox">
-            <Setter Property="Padding" Value="6"/>
-            <Setter Property="Background" Value="#FF333333"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#555"/>
+            <Style.Resources>
+                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="White"/>
+            </Style.Resources>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
         <Style TargetType="ComboBoxItem">
@@ -84,7 +84,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Quản lý Rạp, Ghế &amp; Hạng ghế" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+        <TextBlock Grid.Row="0" Text="QUẢN LÝ SƠ ĐỒ RẠP &amp; HẠNG GHẾ" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,15"/>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -97,8 +97,8 @@
                 <StackPanel>
                     <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="1. Tạo rạp mới (Xem trước)" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                            <TextBlock Text="Tên rạp:" Margin="0,5,0,5" Foreground="Gray"/>
+                            <TextBlock Text="1. TẠO RẠP MỚI (Xem trước)" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="TÊN RẠP:" Margin="0,5,0,5" Foreground="Gray"/>
                             <TextBox Text="{Binding NewTheaterName, UpdateSourceTrigger=PropertyChanged}" GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
                             <Grid Margin="0,5,0,0">
                                 <Grid.ColumnDefinitions>
@@ -180,7 +180,7 @@
 
                     <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="3. Quản lý hạng ghế" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="3. QUẢN LÝ HẠNG GHẾ" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -235,7 +235,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock x:Name="SeatMapTitle" Text="Sơ đồ ghế..." FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="SeatMapTitle" Text="SƠ ĐỒ RẠP..." FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
                             <Viewbox Stretch="Uniform" MaxHeight="400" HorizontalAlignment="Center">
                                 <Grid x:Name="SeatMapGrid" Background="Transparent"/>
                             </Viewbox>
@@ -243,15 +243,12 @@
                         <Image Grid.Column="1" Source="/Assets/logo.png" Width="100" Margin="20,0,0,0" VerticalAlignment="Top" Opacity="0.5"/>
                     </Grid>
                 </Border>
-
-                <TextBlock Grid.Row="1" Text="Danh sách rạp hiện có" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,10"/>
-
                 <DataGrid Grid.Row="2" ItemsSource="{Binding Theaters}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" RowHeaderWidth="0">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding TheaterId}" Width="50" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Tên Rạp" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="Sức chứa" Binding="{Binding TotalSeats}" Width="Auto"/>
-                        <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                        <DataGridTextColumn Header="TÊN RẠP" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="SỨC CHỨA" Binding="{Binding TotalSeats}" Width="Auto"/>
+                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
