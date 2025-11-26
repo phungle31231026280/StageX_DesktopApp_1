@@ -1,0 +1,178 @@
+﻿<UserControl x:Class="StageX_DesktopApp.Views.BookingManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
+             mc:Ignorable="d"
+             Background="#FF1A1A1A" Foreground="White"
+             d:DesignHeight="768" d:DesignWidth="1366">
+
+    <UserControl.DataContext>
+        <vm:BookingManagementViewModel />
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <Style x:Key="ButtonSearchStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF0D6EFD"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ButtonPrintStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFffc107"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#FF333333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#555"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="QUẢN LÝ ĐƠN HÀNG &amp; IN VÉ" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,20"/>
+
+        <Border Grid.Row="1" Background="#FF0C1220" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                    <TextBlock Text="Tra cứu (Mã, Tên):" Foreground="Gray" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding FilterCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                    <TextBlock Text="Trạng thái:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <ComboBox SelectedIndex="{Binding StatusIndex}" Padding="8" FontSize="14">
+                        <ComboBoxItem Content="-- Tất cả --"/>
+                        <ComboBoxItem Content="Đang xử lý"/>
+                        <ComboBoxItem Content="Đã hoàn thành"/>
+                        <ComboBoxItem Content="Đã hủy"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <Button Grid.Column="2" Content="🔍 Tìm kiếm" Style="{StaticResource ButtonSearchStyle}" 
+                        VerticalAlignment="Bottom" Command="{Binding FilterCommand}"/>
+            </Grid>
+        </Border>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Bookings}"
+                  IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
+                  Background="Transparent" RowBackground="#FF1E1E1E" AlternatingRowBackground="#FF252525"
+                  HeadersVisibility="Column" Foreground="White" BorderThickness="0"
+                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333">
+
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="Black"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="FontSize" Value="14"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </Style>
+            </DataGrid.Resources>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="MÃ ĐƠN" Binding="{Binding BookingId}" Width="80" FontWeight="Bold"/>
+                <DataGridTextColumn Header="KHÁCH HÀNH" Binding="{Binding CustomerName}" Width="1.2*"/>
+                <DataGridTextColumn Header="NGƯỜI LẬP" Binding="{Binding CreatorName}" Width="1.2*"/>
+                <DataGridTextColumn Header="VỞ DIỄN" Binding="{Binding ShowTitle}" Width="1.5*"/>
+                <DataGridTextColumn Header="SUẤT DIỄN" Binding="{Binding PerformanceTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="140"/>
+                
+                <DataGridTextColumn Header="GHẾ" Binding="{Binding SeatList}" Width="1.5*"/>
+
+                <DataGridTextColumn Header="TỔNG TIỀN" Binding="{Binding TotalAmount, StringFormat='N0'}" Width="120" FontWeight="Bold"/>
+                <DataGridTextColumn Header="NGÀY TẠO" Binding="{Binding CreatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="140"/>
+                
+                <DataGridTemplateColumn Header="TRẠNG THÁI" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Status}" FontWeight="Bold" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="Thành công">
+                                                <Setter Property="Foreground" Value="#FF198754"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Đã hoàn thành">
+                                                <Setter Property="Foreground" Value="#FF198754"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Đã thanh toán POS">
+                                                <Setter Property="Foreground" Value="#FF198754"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Đã hủy">
+                                                <Setter Property="Foreground" Value="#FFDC3545"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Đang chờ">
+                                                <Setter Property="Foreground" Value="#FFffc107"/>
+                                            </DataTrigger>
+                                             <DataTrigger Binding="{Binding Status}" Value="Đang xử lý">
+                                                <Setter Property="Foreground" Value="#FFffc107"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="🖨 In Vé" Style="{StaticResource ButtonPrintStyle}" 
+                                    Command="{Binding DataContext.PrintTicketCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

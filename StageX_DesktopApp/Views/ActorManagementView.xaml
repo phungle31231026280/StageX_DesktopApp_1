@@ -1,0 +1,165 @@
+﻿<UserControl x:Class="StageX_DesktopApp.Views.ActorManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
+             mc:Ignorable="d" 
+             Background="#FF1A1A1A" Foreground="White"
+             d:DesignHeight="700" d:DesignWidth="1000">
+
+    <UserControl.DataContext>
+        <vm:ActorViewModel />
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="ButtonAddStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF198754"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="ButtonEditStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF0D6EFD"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="ButtonDeleteStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFDC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#FF333333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="QUẢN LÝ DIỄN VIÊN" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,20"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="#FF0C1220" CornerRadius="8" Padding="20" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="THÔNG TIN DIỄN VIÊN" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Họ và Tên:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Nghệ danh (Nick name):" Foreground="Gray" Margin="0,10,0,5"/>
+                    <TextBox Text="{Binding NickName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Link Ảnh (Avatar URL):" Foreground="Gray" Margin="0,10,0,5"/>
+                    <TextBox Text="{Binding AvatarUrl, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Image Source="{Binding AvatarUrl}" Height="100" Width="100" Margin="0,10,0,0" HorizontalAlignment="Left" Stretch="UniformToFill"/>
+
+                    <TextBlock Text="Trạng thái:" Foreground="Gray" Margin="0,10,0,5"/>
+                    <ComboBox SelectedIndex="{Binding StatusIndex}" Padding="8">
+                        <ComboBoxItem Content="Hoạt động"/>
+                        <ComboBoxItem Content="Ngừng hoạt động"/>
+                    </ComboBox>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <Button Content="{Binding SaveButtonContent}" Command="{Binding SaveCommand}" Style="{StaticResource ButtonAddStyle}"/>
+                        <Button Content="Hủy" Command="{Binding ClearCommand}" Background="Gray" Foreground="White" Padding="10,5" Margin="10,0,0,0" BorderThickness="0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Width="250" Tag="Tìm theo tên...">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding LoadActorsCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Button Content="Tìm kiếm" Command="{Binding LoadActorsCommand}" Background="#FF0D6EFD" Foreground="White" Padding="10,5" Margin="10,0,0,0" BorderThickness="0"/>
+                </StackPanel>
+
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Actors}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                          Background="Transparent" RowBackground="#FF1E1E1E" Foreground="White" HeadersVisibility="Column" BorderThickness="0"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333">
+
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="Black"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.Resources>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding ActorId}" Width="50"/>
+
+                        <DataGridTemplateColumn Header="AVATAR" Width="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding AvatarUrl}" Width="40" Height="40" Stretch="UniformToFill">
+                                        <Image.Clip>
+                                            <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20"/>
+                                        </Image.Clip>
+                                    </Image>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="HỌ TÊN" Binding="{Binding FullName}" Width="*"/>
+                        <DataGridTextColumn Header="NGHỆ DANH" Binding="{Binding NickName}" Width="*"/>
+                        <DataGridTextColumn Header="TRẠNG THÁI" Binding="{Binding Status}" Width="Auto"/>
+
+                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Sửa" Style="{StaticResource ButtonEditStyle}" Margin="0,0,5,0" 
+                                                Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}"/>
+
+                                        <Button Content="Xóa" Style="{StaticResource ButtonDeleteStyle}" 
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
