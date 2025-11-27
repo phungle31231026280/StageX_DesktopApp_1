@@ -17,24 +17,32 @@ namespace StageX_DesktopApp.Views
         {
             InitializeComponent();
 
-            // Đăng ký sự kiện ngay khi DataContext được gán
-            this.DataContextChanged += (s, e) =>
-            {
-                if (this.DataContext is TheaterSeatViewModel vm)
-                {
-                    vm.RequestDrawSeats -= BuildSeatMapSafe;
-                    vm.RequestDrawSeats += BuildSeatMapSafe;
-                }
-            };
-
-            // Kiểm tra DataContext ban đầu (quan trọng)
             if (this.DataContext is TheaterSeatViewModel currentVM)
             {
-                currentVM.RequestDrawSeats += BuildSeatMapSafe;
+                SubscribeToViewModel(currentVM);
             }
+
+            this.DataContextChanged += (s, e) =>
+            {
+                if (e.NewValue is TheaterSeatViewModel newVM)
+                {
+                    SubscribeToViewModel(newVM);
+                }
+            };
         }
 
-        // Hàm vẽ ghế An Toàn (Robust)
+        private void SubscribeToViewModel(TheaterSeatViewModel vm)
+        {
+            vm.RequestDrawSeats -= OnViewModelRequestDraw;
+            vm.RequestDrawSeats += OnViewModelRequestDraw;
+        }
+
+        private void OnViewModelRequestDraw(List<Seat> seatList)
+        {
+            _selectedSeats.Clear();
+            BuildSeatMapSafe(seatList);
+        }
+
         private void BuildSeatMapSafe(List<Seat> seatList)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -42,89 +50,153 @@ namespace StageX_DesktopApp.Views
                 try
                 {
                     SeatMapGrid.Children.Clear();
-                    _selectedSeats.Clear();
                     UpdateAssignComboBoxes(seatList);
 
                     if (seatList == null || seatList.Count == 0) return;
 
-                    // 1. Nhóm ghế theo Hàng (Trim và ToUpper để tránh lỗi dữ liệu)
+                    int maxSeatNum = seatList.Max(s => s.SeatNumber);
+
                     var rowsGroup = seatList
                         .Where(s => !string.IsNullOrEmpty(s.RowChar))
                         .GroupBy(s => s.RowChar.Trim().ToUpper())
                         .OrderBy(g => g.Key.Length).ThenBy(g => g.Key)
                         .ToList();
 
-                    // 2. Dùng StackPanel để xếp gạch (An toàn hơn Grid)
+                    // Sử dụng StackPanel để xếp các hàng dọc
                     StackPanel mainPanel = new StackPanel
                     {
                         Orientation = Orientation.Vertical,
-                        HorizontalAlignment = HorizontalAlignment.Center
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Top
                     };
 
                     foreach (var group in rowsGroup)
                     {
-                        StackPanel rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 5), HorizontalAlignment = HorizontalAlignment.Center };
+                        // StackPanel ngang cho từng hàng ghế
+                        StackPanel rowPanel = new StackPanel
+                        {
+                            Orientation = Orientation.Horizontal,
+                            Margin = new Thickness(0, 0, 0, 4), // Khoảng cách giữa các hàng
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        };
 
-                        // Tên Hàng
+                        // Tên Hàng (A, B...)
                         TextBlock rowLabel = new TextBlock
                         {
                             Text = group.Key,
-                            Width = 30,
+                            Width = 25,
                             VerticalAlignment = VerticalAlignment.Center,
                             FontWeight = FontWeights.Bold,
                             Foreground = Brushes.Gray,
-                            FontSize = 14,
-                            Margin = new Thickness(0, 0, 10, 0),
+                            FontSize = 12, // Chữ tên hàng vừa phải
+                            Margin = new Thickness(0, 0, 8, 0), // Cách ghế ra một chút
                             TextAlignment = TextAlignment.Right
                         };
                         rowPanel.Children.Add(rowLabel);
 
-                        // Nút Ghế
-                        foreach (var seat in group.OrderBy(s => s.SeatNumber))
+                        // Logic đếm lại số ghế thực tế
+                        int realCount = 1;
+
+                        for (int i = 1; i <= maxSeatNum; i++)
                         {
-                            var btn = new Button
+                            var seat = group.FirstOrDefault(s => s.SeatNumber == i);
+
+                            if (seat != null)
                             {
-                                Content = $"{seat.RowChar}{seat.RealSeatNumber}",
-                                Tag = seat,
-                                Width = 35,
-                                Height = 30,
-                                Margin = new Thickness(2),
-                                Foreground = Brushes.Black,
-                                FontWeight = FontWeights.Bold,
-                                FontSize = 11
-                            };
+                                seat.RealSeatNumber = realCount;
+                                realCount++;
 
-                            // Tô màu
-                            if (seat.SeatCategory != null && seat.SeatCategory.DisplayColor != null)
-                                btn.Background = seat.SeatCategory.DisplayColor;
+                                var btn = CreateSeatButton(seat);
+                                rowPanel.Children.Add(btn);
+                            }
                             else
-                                btn.Background = Brushes.Gray; // Chưa gán hạng
-
-                            btn.Click += SeatButton_Click;
-                            rowPanel.Children.Add(btn);
+                            {
+                                // Vẽ ghế trống (Spacer) để giữ vị trí cột
+                                var spacer = new Border
+                                {
+                                    Width = 30,  // Bằng kích thước nút
+                                    Height = 26, // Bằng kích thước nút
+                                    Margin = new Thickness(2), // Bằng margin nút
+                                    Background = Brushes.Transparent
+                                };
+                                rowPanel.Children.Add(spacer);
+                            }
                         }
                         mainPanel.Children.Add(rowPanel);
                     }
                     SeatMapGrid.Children.Add(mainPanel);
                 }
-                catch (Exception ex) { MessageBox.Show("Lỗi vẽ ghế: " + ex.Message); }
+                catch (Exception ex) { MessageBox.Show("Lỗi vẽ sơ đồ: " + ex.Message); }
             });
+        }
+
+        private Button CreateSeatButton(Seat seat)
+        {
+            var btn = new Button
+            {
+                Content = $"{seat.RowChar}{seat.RealSeatNumber}",
+                Tag = seat,
+                // [ĐIỀU CHỈNH KÍCH THƯỚC TẠI ĐÂY]
+                Width = 30,   // Chiều rộng chuẩn (nhỏ hơn 35 của bản cũ)
+                Height = 26,  // Chiều cao chuẩn (nhỏ hơn 30 của bản cũ)
+                Margin = new Thickness(2), // Khoảng cách giữa các ghế
+                FontSize = 10, // Cỡ chữ vừa vặn
+
+                Foreground = Brushes.Black,
+                FontWeight = FontWeights.SemiBold, // Đậm vừa phải
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.Gray,
+                Padding = new Thickness(0),
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+
+            // Tô màu nền
+            if (seat.SeatCategory != null && !string.IsNullOrEmpty(seat.SeatCategory.ColorClass))
+            {
+                try
+                {
+                    string hex = seat.SeatCategory.ColorClass.StartsWith("#") ? seat.SeatCategory.ColorClass : "#" + seat.SeatCategory.ColorClass;
+                    btn.Background = (SolidColorBrush)new BrushConverter().ConvertFrom(hex);
+                }
+                catch { btn.Background = Brushes.Teal; }
+            }
+            else
+            {
+                btn.Background = new SolidColorBrush(Color.FromRgb(50, 50, 50));
+                btn.Foreground = Brushes.White; // Ghế chưa gán hạng thì chữ trắng
+            }
+
+            // Tô viền đỏ nếu đang chọn
+            if (_selectedSeats.Any(s => (s.SeatId > 0 && s.SeatId == seat.SeatId) || (s.RowChar == seat.RowChar && s.SeatNumber == seat.SeatNumber)))
+            {
+                btn.BorderThickness = new Thickness(2);
+                btn.BorderBrush = Brushes.Red;
+            }
+
+            btn.Click += SeatButton_Click;
+            return btn;
         }
 
         private void SeatButton_Click(object sender, RoutedEventArgs e)
         {
-            var btn = sender as Button; var seat = btn?.Tag as Seat;
+            var btn = sender as Button;
+            var seat = btn?.Tag as Seat;
             if (seat == null) return;
 
-            if (_selectedSeats.Contains(seat))
+            if (DataContext is TheaterSeatViewModel vm && vm.IsReadOnlyMode) return;
+
+            var existing = _selectedSeats.FirstOrDefault(s => s.RowChar == seat.RowChar && s.SeatNumber == seat.SeatNumber);
+
+            if (existing != null)
             {
-                _selectedSeats.Remove(seat);
-                btn.BorderThickness = new Thickness(0);
+                _selectedSeats.Remove(existing);
+                btn.BorderThickness = new Thickness(1);
+                btn.BorderBrush = Brushes.Gray;
             }
             else
             {
                 _selectedSeats.Add(seat);
-                btn.BorderThickness = new Thickness(3);
+                btn.BorderThickness = new Thickness(2);
                 btn.BorderBrush = Brushes.Red;
             }
         }
@@ -132,7 +204,6 @@ namespace StageX_DesktopApp.Views
         private void UpdateAssignComboBoxes(List<Seat> seats)
         {
             if (seats == null) return;
-            // Cập nhật dữ liệu cho Combobox chọn vùng
             var rows = seats.Select(s => s.RowChar.Trim().ToUpper()).Distinct().OrderBy(r => r.Length).ThenBy(r => r).ToList();
             var nums = seats.Select(s => s.SeatNumber).Distinct().OrderBy(n => n).ToList();
 
@@ -143,22 +214,35 @@ namespace StageX_DesktopApp.Views
 
         private void SelectRangeButton_Click(object sender, RoutedEventArgs e)
         {
-            if (AssignRowComboBox.SelectedValue == null) return;
+            if (AssignRowComboBox.SelectedValue == null)
+            {
+                MessageBox.Show("Vui lòng chọn Hàng ghế!"); return;
+            }
+
             string row = AssignRowComboBox.SelectedValue.ToString();
             int start = (int)(AssignSeatStartComboBox.SelectedValue ?? 0);
-            int end = (int)(AssignSeatEndComboBox.SelectedValue ?? 100);
+            int end = (int)(AssignSeatEndComboBox.SelectedValue ?? 1000);
 
-            if (this.DataContext is TheaterSeatViewModel vm)
+            if (DataContext is TheaterSeatViewModel vm)
             {
-                var rangeSeats = vm.CurrentSeats
-                    .Where(s => s.RowChar.Trim().ToUpper() == row && s.SeatNumber >= start && s.SeatNumber <= end)
-                    .ToList();
+                var range = vm.CurrentSeats.Where(s => s.RowChar.Trim().ToUpper() == row && s.SeatNumber >= start && s.SeatNumber <= end).ToList();
+                int count = 0;
+                foreach (var s in range)
+                {
+                    if (!_selectedSeats.Any(sel => sel.RowChar == s.RowChar && sel.SeatNumber == s.SeatNumber))
+                    {
+                        _selectedSeats.Add(s);
+                        count++;
+                    }
+                }
 
-                foreach (var s in rangeSeats) if (!_selectedSeats.Contains(s)) _selectedSeats.Add(s);
-
-                // Vẽ lại để thấy viền đỏ
+                // Vẽ lại để hiện viền đỏ (Không xóa _selectedSeats)
                 BuildSeatMapSafe(vm.CurrentSeats);
-                MessageBox.Show($"Đã chọn {rangeSeats.Count} ghế. Nhấn 'Áp dụng' để gán hạng.");
+
+                if (count > 0)
+                    MessageBox.Show($"Đã thêm {count} ghế vào lựa chọn. Hãy chọn Hạng ghế và bấm Áp dụng!");
+                else
+                    MessageBox.Show("Không tìm thấy ghế nào mới trong khoảng này.");
             }
         }
 
@@ -166,40 +250,29 @@ namespace StageX_DesktopApp.Views
         {
             if (AssignCategoryComboBox.SelectedValue == null || _selectedSeats.Count == 0)
             {
-                MessageBox.Show("Chưa chọn hạng hoặc chưa chọn ghế!"); return;
+                MessageBox.Show("Chưa chọn ghế hoặc chưa chọn hạng ghế!");
+                return;
             }
+
             int catId = (int)AssignCategoryComboBox.SelectedValue;
-            if (this.DataContext is TheaterSeatViewModel vm)
+
+            if (DataContext is TheaterSeatViewModel vm)
             {
                 await vm.ApplyCategoryToSeats(catId, _selectedSeats);
                 _selectedSeats.Clear();
+                BuildSeatMapSafe(vm.CurrentSeats);
             }
         }
 
         private void RemoveSelectedSeats_Click(object sender, RoutedEventArgs e)
         {
-            if (this.DataContext is TheaterSeatViewModel vm)
+            if (DataContext is TheaterSeatViewModel vm)
             {
-                if (!vm.IsCreatingNew) { MessageBox.Show("Chỉ được xóa ghế khi tạo mới!"); return; }
+                if (!vm.IsCreatingNew) { MessageBox.Show("Chỉ được xóa ghế khi tạo rạp mới!"); return; }
+                if (_selectedSeats.Count == 0) return;
+
                 vm.RemoveSeats(_selectedSeats);
                 _selectedSeats.Clear();
-            }
-        }
-
-        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
-        {
-            if (sender is TextBox tb && (tb.Text.Contains("Tên") || tb.Text.Contains("Số") || tb.Text.Contains("Giá")))
-            {
-                tb.Text = ""; tb.Foreground = Brushes.White;
-            }
-        }
-        private void TextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (sender is TextBox tb && string.IsNullOrWhiteSpace(tb.Text))
-            {
-                tb.Foreground = Brushes.Gray;
-                if (tb.Name.Contains("Name")) tb.Text = "Tên...";
-                else tb.Text = "0";
             }
         }
     }

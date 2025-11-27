@@ -353,12 +353,12 @@ namespace StageX_DesktopApp.Services
                     .AsNoTracking()
                     .ToListAsync();
 
-                // Tính toán trạng thái (Logic cũ của bạn)
                 foreach (var t in theaters)
                 {
+                    // Logic: Chỉ xóa được nếu chưa có suất diễn nào
                     t.CanDelete = (t.Performances == null || !t.Performances.Any());
-                    bool hasPast = t.Performances != null && t.Performances.Any(p => p.PerformanceDate < DateTime.Now);
-                    t.CanEdit = !hasPast;
+                    // Logic: Đã có suất diễn thì chỉ Xem, không Sửa cấu trúc
+                    t.CanEdit = true;
                 }
                 return theaters;
             }
@@ -377,15 +377,13 @@ namespace StageX_DesktopApp.Services
         {
             using (var context = new AppDbContext())
             {
-                // 1. Lưu Rạp
                 context.Theaters.Add(theater);
-                await context.SaveChangesAsync(); // Để lấy ID
+                await context.SaveChangesAsync(); // Lấy ID rạp
 
-                // 2. Lưu Ghế
                 foreach (var s in seats)
                 {
                     s.TheaterId = theater.TheaterId;
-                    s.SeatCategory = null; // Để EF không insert lại Category
+                    s.SeatCategory = null; // Reset để tránh EF add lại category
                     context.Seats.Add(s);
                 }
                 await context.SaveChangesAsync();
@@ -429,44 +427,23 @@ namespace StageX_DesktopApp.Services
         {
             using (var context = new AppDbContext())
             {
+                // Load ghế kèm hạng ghế để lấy màu
                 return await context.Seats
                     .Where(s => s.TheaterId == theaterId)
                     .Include(s => s.SeatCategory)
                     .OrderBy(s => s.RowChar).ThenBy(s => s.SeatNumber)
-                    .AsNoTracking()
                     .ToListAsync();
             }
         }
 
-        // Lưu Rạp Mới (Kèm tạo ghế)
-        public async Task SaveNewTheaterWithSeatsAsync(Theater theater, List<Seat> seats)
-        {
-            using (var context = new AppDbContext())
-            {
-                context.Theaters.Add(theater);
-                await context.SaveChangesAsync(); // Để lấy TheaterId
-
-                foreach (var s in seats)
-                {
-                    s.TheaterId = theater.TheaterId;
-                    s.SeatCategory = null; // Tránh EF add lại Category
-                    context.Seats.Add(s);
-                }
-                await context.SaveChangesAsync();
-            }
-        }
 
         // Cập nhật tên Rạp
-        public async Task UpdateTheaterNameAsync(int id, string newName)
+        public async Task UpdateTheaterNameAsync(int id, string name)
         {
             using (var context = new AppDbContext())
             {
                 var t = await context.Theaters.FindAsync(id);
-                if (t != null)
-                {
-                    t.Name = newName;
-                    await context.SaveChangesAsync();
-                }
+                if (t != null) { t.Name = name; await context.SaveChangesAsync(); }
             }
         }
 
@@ -488,7 +465,7 @@ namespace StageX_DesktopApp.Services
         {
             using (var context = new AppDbContext())
             {
-                // Gọi SP xóa ghế trước, rồi xóa rạp
+                // Xóa ghế trước rồi xóa rạp (Gọi SP)
                 await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_seats_by_theater({theaterId})");
                 await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_theater({theaterId})");
             }
