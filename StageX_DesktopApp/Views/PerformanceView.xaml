@@ -106,7 +106,9 @@
             </Style.Resources>
             <Setter Property="Foreground" Value="Black"/>
         </Style>
-        <Style TargetType="DatePicker" BasedOn="{StaticResource InputStyle}"/>
+        <Style TargetType="DatePicker" BasedOn="{StaticResource InputStyle}">
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
 
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="Black"/>
@@ -144,18 +146,18 @@
 
                     <StackPanel Grid.Column="0" Margin="0,0,0,8">
                         <TextBlock Text="Vở diễn:" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <ComboBox ItemsSource="{Binding ShowsList}" SelectedItem="{Binding SelectedShow}" DisplayMemberPath="Title"/>
+                        <ComboBox ItemsSource="{Binding ShowsList}" SelectedItem="{Binding SelectedShow}" DisplayMemberPath="Title" IsEnabled="{Binding IsDetailEditable}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="0,0,0,8"/>
                     <StackPanel Grid.Column="2" Margin="0,0,0,8">
                         <TextBlock Text="Rạp:" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <ComboBox ItemsSource="{Binding TheatersList}" SelectedItem="{Binding SelectedTheater}" DisplayMemberPath="Name"/>
+                        <ComboBox ItemsSource="{Binding TheatersList}" SelectedItem="{Binding SelectedTheater}" DisplayMemberPath="Name" IsEnabled="{Binding IsDetailEditable}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="4" Margin="0,0,0,8">
                         <TextBlock Text="Ngày diễn:" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <DatePicker SelectedDate="{Binding PerfDate}"/>
+                        <DatePicker SelectedDate="{Binding PerfDate}" IsEnabled="{Binding IsDetailEditable}"/>
                     </StackPanel>
                 </Grid>
 
@@ -172,12 +174,12 @@
 
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="Giờ bắt đầu (HH:mm):" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <TextBox Text="{Binding StartTimeStr}"/>
+                        <TextBox Text="{Binding StartTimeStr}" IsEnabled="{Binding IsDetailEditable}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Giá vé (VNĐ):" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <TextBox Text="{Binding PriceStr}"/>
+                        <TextBox Text="{Binding PriceStr}" IsEnabled="{Binding IsDetailEditable}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="4">

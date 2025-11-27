@@ -31,10 +31,11 @@ namespace StageX_DesktopApp.ViewModels
 
         [ObservableProperty] private string _editTheaterName;
         [ObservableProperty] private Theater _selectedTheater;
+        [ObservableProperty] private string _saveBtnContent = "Lưu rạp mới";
 
         [ObservableProperty] private string _categoryName = "";
         [ObservableProperty] private string _categoryPrice = "";
-        [ObservableProperty] private int _editingCategoryId = 0;
+        [ObservableProperty] private int _editingCategoryId =0;
         [ObservableProperty] private string _categoryBtnContent = "Thêm";
 
         public event Action<List<Seat>> RequestDrawSeats;
@@ -62,7 +63,7 @@ namespace StageX_DesktopApp.ViewModels
             }
             if (string.IsNullOrWhiteSpace(NewTheaterName)) { MessageBox.Show("Nhập tên rạp!"); return; }
 
-            IsEditing = true; IsCreatingNew = true; IsReadOnlyMode = false;
+            IsEditing = true; IsCreatingNew = true; IsReadOnlyMode = false; SaveBtnContent = "Lưu rạp mới";
             EditPanelTitle = "Tạo rạp mới (Chưa lưu)";
             SelectedTheater = null; EditTheaterName = NewTheaterName;
 
@@ -83,21 +84,48 @@ namespace StageX_DesktopApp.ViewModels
         private async Task SelectTheater(Theater t)
         {
             if (t == null) return;
-            IsEditing = true; IsCreatingNew = false;
-            SelectedTheater = t; EditTheaterName = t.Name;
+            SelectedTheater = t;
+            EditTheaterName = t.Name;
 
-            if (t.CanDelete) { IsReadOnlyMode = false; EditPanelTitle = $"Chỉnh sửa: {t.Name}"; }
-            else { IsReadOnlyMode = true; EditPanelTitle = $"Xem chi tiết: {t.Name} (Đang hoạt động)"; }
+            // [CẬP NHẬT LOGIC QUAN TRỌNG TẠI ĐÂY]
+            if (t.CanDelete)
+            {
+                // Trường hợp: Rạp CHƯA DÙNG -> Được phép Sửa
+                IsEditing = true; // HIỆN bảng cấu hình để sửa
+                IsCreatingNew = false;
+                IsReadOnlyMode = false;
+                EditPanelTitle = $"Chỉnh sửa rạp {t.Name}";
+                SaveBtnContent = "Cập nhật";
+            }
+            else
+            {
+                // Trường hợp: Rạp ĐÃ DÙNG -> Chỉ Xem
+                IsEditing = false; // ẨN luôn bảng cấu hình đi cho gọn
+                IsCreatingNew = false;
+                IsReadOnlyMode = true;
+                // Không cần EditPanelTitle vì bảng đã ẩn
+            }
 
             try
             {
                 CurrentSeats = await _dbService.GetSeatsByTheaterAsync(t.TheaterId);
                 await Task.Delay(50);
-                RequestDrawSeats?.Invoke(CurrentSeats);
+                RequestDrawSeats?.Invoke(CurrentSeats); // Vẫn vẽ sơ đồ bên phải bình thường
             }
             catch (Exception ex) { MessageBox.Show("Lỗi tải ghế: " + ex.Message); }
         }
-
+        [RelayCommand]
+        private async Task SaveOrUpdateTheater()
+        {
+            if (IsCreatingNew)
+            {
+                await SaveNewTheater();
+            }
+            else
+            {
+                await UpdateCurrentTheater();
+            }
+        }
         [RelayCommand]
         private async Task SaveTheaterName()
         {
@@ -121,7 +149,23 @@ namespace StageX_DesktopApp.ViewModels
             }
             catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
         }
+        private async Task UpdateCurrentTheater()
+        {
+            if (SelectedTheater == null) return;
+            try
+            {
+                await _dbService.UpdateTheaterNameAsync(SelectedTheater.TheaterId, EditTheaterName);
+                if (CurrentSeats != null && CurrentSeats.Count > 0)
+                {
+                    await _dbService.UpdateSeatsCategoryAsync(CurrentSeats);
+                }
 
+                MessageBox.Show("Cập nhật thành công!");
+                CancelEdit();
+                await LoadData();
+            }
+            catch (Exception ex) { MessageBox.Show("Lỗi cập nhật: " + ex.Message); }
+        }
         [RelayCommand]
         private async Task DeleteTheater(Theater t)
         {

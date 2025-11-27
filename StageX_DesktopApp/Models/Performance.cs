@@ -42,5 +42,7 @@ namespace StageX_DesktopApp.Models
         public string ShowTitle { get; set; }
         [NotMapped]
         public string TheaterName { get; set; }
+        [NotMapped]
+        public bool HasBookings { get; set; }
     }
 }

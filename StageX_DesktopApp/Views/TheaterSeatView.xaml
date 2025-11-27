@@ -165,7 +165,9 @@
 
                             <Separator Background="#333" Margin="0,15"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="LƯU RẠP MỚI" Style="{StaticResource ButtonAddStyle}" Padding="15,10" Command="{Binding SaveNewTheaterCommand}" Visibility="{Binding IsCreatingNew, Converter={StaticResource BoolToVis}}"/>
+                                <Button Content="{Binding SaveBtnContent}" Style="{StaticResource ButtonAddStyle}" 
+                                        Padding="15,10" 
+                                        Command="{Binding SaveOrUpdateTheaterCommand}"/>
                                 <Button Content="Đóng / Hủy" Style="{StaticResource ButtonCancelStyle}" Margin="10,0,0,0" Command="{Binding CancelEditCommand}"/>
                             </StackPanel>
                         </StackPanel>

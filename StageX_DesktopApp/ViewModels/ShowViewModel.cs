@@ -33,6 +33,7 @@ namespace StageX_DesktopApp.ViewModels
 
         // Danh sách hiển thị
         [ObservableProperty] private ObservableCollection<Show> _shows;
+        [ObservableProperty] private string _saveBtnContent = "Thêm";
 
         // Dữ liệu cho các ListBox chọn nhiều
         [ObservableProperty] private ObservableCollection<SelectableGenre> _genresList;
@@ -105,6 +106,7 @@ namespace StageX_DesktopApp.ViewModels
             Duration = show.DurationMinutes;
             PosterUrl = show.PosterImageUrl;
             Description = show.Description;
+            SaveBtnContent = "Cập nhật";
 
             // Đánh dấu các thể loại đã chọn
             foreach (var g in GenresList)
@@ -121,7 +123,8 @@ namespace StageX_DesktopApp.ViewModels
             ShowId = 0;
             Title = ""; Director = ""; Duration = 0; PosterUrl = ""; Description = "";
             foreach (var g in GenresList) g.IsSelected = false;
-            foreach (var a in ActorsList) a.IsSelected = false;
+            foreach (var a in ActorsList) a.IsSelected = false; 
+            SaveBtnContent = "Thêm";
         }
 
         [RelayCommand]

@@ -208,14 +208,39 @@ namespace StageX_DesktopApp.ViewModels
         [RelayCommand]
         private async Task SaveOrder()
         {
-            if (_currentPerfId == 0 || !BillSeats.Any()) { MessageBox.Show("Vui lòng chọn suất và ghế!"); return; }
+            if (_currentPerfId == 0 || !BillSeats.Any()) 
+            { 
+                MessageBox.Show("Vui lòng chọn suất và ghế!"); 
+                return; 
+            }
+            
             decimal total = BillSeats.Sum(x => x.Price);
 
             if (IsCashPayment)
             {
-                if (!decimal.TryParse(CashGiven, out decimal given) || given < total) { MessageBox.Show("Tiền khách đưa thiếu!"); return; }
+                // 1. Kiểm tra nhập liệu có phải số không
+                if (!decimal.TryParse(CashGiven, out decimal given)) 
+                { 
+                    MessageBox.Show("Vui lòng nhập số tiền hợp lệ!"); 
+                    return; 
+                }
+
+                // 2. [MỚI] Kiểm tra số tròn nghìn (Chia hết cho 1000)
+                if (given % 1000 != 0)
+                {
+                    MessageBox.Show("Số tiền khách đưa phải là số tròn nghìn (Ví dụ: 50.000, 100.000)!");
+                    return;
+                }
+
+                // 3. Kiểm tra đủ tiền chưa
+                if (given < total) 
+                { 
+                    MessageBox.Show($"Khách đưa thiếu tiền! Cần thanh toán: {total:N0}đ"); 
+                    return; 
+                }
             }
 
+            // Nếu qua hết các bước kiểm tra thì tiến hành lưu xuống DB
             try
             {
                 int staffId = AuthSession.CurrentUser?.UserId ?? 0;
@@ -228,6 +253,7 @@ namespace StageX_DesktopApp.ViewModels
                     await _dbService.CreatePaymentAndTicketsAsync(bookingId, total, method, seatIds);
 
                     MessageBox.Show("Thanh toán thành công!");
+                    
                     if (IsPeakMode) SwitchMode("Peak");
                     else SelectPerformanceLogic(_currentPerfId, _currentPrice, SelectedPerfText.Replace("Suất chiếu: ", ""));
                 }

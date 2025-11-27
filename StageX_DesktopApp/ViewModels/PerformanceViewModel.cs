@@ -27,6 +27,7 @@ namespace StageX_DesktopApp.ViewModels
         [ObservableProperty] private string _searchShowName;
         [ObservableProperty] private Theater _selectedFilterTheater;
         [ObservableProperty] private DateTime? _selectedFilterDate;
+        [ObservableProperty] private bool _isDetailEditable = true;
 
         // Form Fields
         [ObservableProperty] private int _perfId;
@@ -97,6 +98,17 @@ namespace StageX_DesktopApp.ViewModels
             PriceStr = p.Price.ToString("F0");
             StatusIndex = (p.Status == "Đã hủy") ? 1 : 0;
             SaveBtnContent = "Lưu thay đổi";
+            if (p.HasBookings)
+            {
+                // Đã có vé -> Chỉ cho sửa Status (IsDetailEditable = false)
+                IsDetailEditable = false;
+                MessageBox.Show("Suất diễn này đang có đơn đặt vé.\nBạn chỉ được phép thay đổi TRẠNG THÁI, không thể sửa thông tin chi tiết hoặc xóa.", "Lưu ý", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                // Chưa có vé -> Cho sửa hết
+                IsDetailEditable = true;
+            }
         }
 
         [RelayCommand]
@@ -110,6 +122,7 @@ namespace StageX_DesktopApp.ViewModels
             PriceStr = "";
             StatusIndex = 0;
             SaveBtnContent = "Thêm suất diễn";
+            IsDetailEditable = true;
         }
 
         [RelayCommand]
@@ -147,6 +160,12 @@ namespace StageX_DesktopApp.ViewModels
         [RelayCommand]
         private async Task Delete(Performance p)
         {
+            if (p.HasBookings)
+            {
+                MessageBox.Show("Không thể xóa suất diễn này vì đã có vé được bán!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             if (MessageBox.Show("Xóa suất diễn này?", "Xác nhận", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 try
@@ -156,7 +175,7 @@ namespace StageX_DesktopApp.ViewModels
                 }
                 catch
                 {
-                    MessageBox.Show("Không thể xóa (Có thể đã có vé đặt).");
+                    MessageBox.Show("Lỗi khi xóa dữ liệu.");
                 }
             }
         }
