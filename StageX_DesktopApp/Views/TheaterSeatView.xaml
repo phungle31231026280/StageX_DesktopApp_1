@@ -22,8 +22,8 @@
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
         <Style x:Key="ButtonEditStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF0D6EFD"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FFffc107"/>
+            <Setter Property="Foreground" Value="Black"/>
             <Setter Property="Padding" Value="8,3"/>
         </Style>
         <Style x:Key="ButtonDeleteStyle" TargetType="Button">
@@ -32,10 +32,9 @@
             <Setter Property="Padding" Value="8,3"/>
         </Style>
         <Style x:Key="ButtonViewStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF17A2B8"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FFffc107"/>
+            <Setter Property="Foreground" Value="Black"/>
             <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
         <Style x:Key="ButtonSaveStyle" TargetType="Button" BasedOn="{StaticResource ButtonEditStyle}">
             <Setter Property="Padding" Value="10,5"/>
@@ -59,10 +58,10 @@
             <Setter Property="BorderBrush" Value="#555"/>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Padding" Value="6"/>
-            <Setter Property="Background" Value="#FF333333"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#555"/>
+            <Style.Resources>
+                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="White"/>
+            </Style.Resources>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="Black"/>
@@ -78,7 +77,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Quản lý Rạp, Ghế &amp; Hạng ghế" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+        <TextBlock Grid.Row="0" Text="Quản lý SƠ ĐỒ RẠP &amp; HẠNG GHẾ" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,15"/>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -91,7 +90,7 @@
                 <StackPanel>
                     <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="1. Tạo rạp mới (Xem trước)" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="1. TẠO RẠP MỚI (Xem trước)" FontSize="18" FontWeight="SemiBold" Foreground="#FFffc107" Margin="0,0,0,10"/>
                             <TextBlock Text="Tên rạp:" Margin="0,5,0,5" Foreground="Gray"/>
                             <TextBox Text="{Binding NewTheaterName, UpdateSourceTrigger=PropertyChanged}"/>
                             <Grid Margin="0,5,0,0">
@@ -115,7 +114,7 @@
                     <Border x:Name="EditTheaterPanel" Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,10,0,10" 
                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="{Binding EditPanelTitle}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#FFffc107"/>
+                            <TextBlock Text="{Binding EditPanelTitle}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#FFffc107"/>
 
                             <StackPanel Visibility="{Binding IsCreatingNew, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Tên rạp:" Margin="0,5,0,5" Foreground="Gray"/>
@@ -124,7 +123,7 @@
                                 <Separator Background="#333" Margin="0,15"/>
                             </StackPanel>
 
-                            <TextBlock Text="Công cụ chọn vùng" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#FFffc107"/>
+                            <TextBlock Text="Chọn vùng" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#FFffc107"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -174,30 +173,32 @@
 
                     <Border Background="#FF0C1220" CornerRadius="5" Padding="15" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="3. Quản lý hạng ghế" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="2. QUẢN LÝ HẠNG GHẾ" FontSize="18" FontWeight="SemiBold" Foreground="#FFffc107" Margin="0,0,0,10"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Tên hạng ghế:" Margin="0,5,0,5" Foreground="Gray"/>
                                     <TextBox Text="{Binding CategoryName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Giá phụ thu:" Margin="0,5,0,5" Foreground="Gray"/>
                                     <TextBox Text="{Binding CategoryPrice, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="{Binding CategoryBtnContent}" Command="{Binding SaveCategoryCommand}" Style="{StaticResource ButtonAddStyle}" Height="80" Width="80"/>
+                                <Button Grid.Column="1" Content="{Binding CategoryBtnContent}" Command="{Binding SaveCategoryCommand}" Style="{StaticResource ButtonAddStyle}" Height="90" Width="80"/>
                             </Grid>
                             <DataGrid MaxHeight="200" Margin="0,15,0,0" ItemsSource="{Binding Categories}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" RowHeaderWidth="0">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Tên Hạng" Binding="{Binding CategoryName}" Width="*"/>
-                                    <DataGridTextColumn Header="Giá" Binding="{Binding BasePrice, StringFormat='N0'}" Width="Auto"/>
-                                    <DataGridTemplateColumn Header="Màu" Width="50">
+                                    <DataGridTextColumn Header="TÊN HẠNG" Binding="{Binding CategoryName}" Width="*"/>
+                                    <DataGridTextColumn Header="GIÁ" Binding="{Binding BasePrice, StringFormat='N0'}" Width="Auto"/>
+                                    <DataGridTemplateColumn Header="MÀU" Width="50">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Background="{Binding DisplayColor}" Width="20" Height="20" CornerRadius="3"/>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                                    <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -225,7 +226,7 @@
                 <Border Grid.Row="0" Background="#FF0C1220" CornerRadius="5" Padding="15" MinHeight="250" Margin="0,0,0,10">
                     <Grid>
                         <StackPanel>
-                            <TextBlock x:Name="SeatMapTitle" Text="Sơ đồ ghế..." FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="SeatMapTitle" Text="SƠ ĐỒ GHẾ" FontSize="18" FontWeight="SemiBold" Foreground="#FFffc107"  Margin="0,0,0,10"/>
 
                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center" VerticalAlignment="Top">
                                 <Grid x:Name="SeatMapGrid" Background="Transparent" Margin="10"/>
@@ -235,16 +236,14 @@
                         <Image Source="/Assets/logo.png" Width="100" Margin="20,0,0,0" VerticalAlignment="Top" Opacity="0.5" HorizontalAlignment="Right"/>
                     </Grid>
                 </Border>
-
-                <TextBlock Grid.Row="1" Text="Danh sách rạp hiện có" FontSize="18" FontWeight="SemiBold" Margin="0,20,0,10"/>
-
+                
                 <DataGrid Grid.Row="2" ItemsSource="{Binding Theaters}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" RowHeaderWidth="0">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding TheaterId}" Width="50" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Tên Rạp" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="Sức chứa" Binding="{Binding TotalSeats}" Width="Auto"/>
+                        <DataGridTextColumn Header="TÊN RẠP" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="SỨC CHỨA" Binding="{Binding TotalSeats}" Width="Auto"/>
 
-                        <DataGridTemplateColumn Header="Hành động" Width="Auto">
+                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">

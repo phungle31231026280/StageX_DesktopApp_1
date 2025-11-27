@@ -23,17 +23,17 @@ namespace StageX_DesktopApp.ViewModels
         [ObservableProperty] private bool _isEditing = false;
         [ObservableProperty] private bool _isCreatingNew = false;
         [ObservableProperty] private bool _isReadOnlyMode = false;
-        [ObservableProperty] private string _editPanelTitle = "2. Cấu hình Rạp";
+        [ObservableProperty] private string _editPanelTitle = "Cấu hình Rạp";
 
-        [ObservableProperty] private string _newTheaterName = "Rạp mới";
-        [ObservableProperty] private string _newRows = "10";
-        [ObservableProperty] private string _newCols = "12";
+        [ObservableProperty] private string _newTheaterName = "";
+        [ObservableProperty] private string _newRows = "";
+        [ObservableProperty] private string _newCols = "";
 
         [ObservableProperty] private string _editTheaterName;
         [ObservableProperty] private Theater _selectedTheater;
 
-        [ObservableProperty] private string _categoryName = "VIP";
-        [ObservableProperty] private string _categoryPrice = "50000";
+        [ObservableProperty] private string _categoryName = "";
+        [ObservableProperty] private string _categoryPrice = "";
         [ObservableProperty] private int _editingCategoryId = 0;
         [ObservableProperty] private string _categoryBtnContent = "Thêm";
 
@@ -63,7 +63,7 @@ namespace StageX_DesktopApp.ViewModels
             if (string.IsNullOrWhiteSpace(NewTheaterName)) { MessageBox.Show("Nhập tên rạp!"); return; }
 
             IsEditing = true; IsCreatingNew = true; IsReadOnlyMode = false;
-            EditPanelTitle = "1. Tạo rạp mới (Chưa lưu)";
+            EditPanelTitle = "Tạo rạp mới (Chưa lưu)";
             SelectedTheater = null; EditTheaterName = NewTheaterName;
 
             CurrentSeats.Clear();
@@ -86,8 +86,8 @@ namespace StageX_DesktopApp.ViewModels
             IsEditing = true; IsCreatingNew = false;
             SelectedTheater = t; EditTheaterName = t.Name;
 
-            if (t.CanDelete) { IsReadOnlyMode = false; EditPanelTitle = $"2. Chỉnh sửa: {t.Name}"; }
-            else { IsReadOnlyMode = true; EditPanelTitle = $"2. Xem chi tiết: {t.Name} (Đang hoạt động)"; }
+            if (t.CanDelete) { IsReadOnlyMode = false; EditPanelTitle = $"Chỉnh sửa: {t.Name}"; }
+            else { IsReadOnlyMode = true; EditPanelTitle = $"Xem chi tiết: {t.Name} (Đang hoạt động)"; }
 
             try
             {
