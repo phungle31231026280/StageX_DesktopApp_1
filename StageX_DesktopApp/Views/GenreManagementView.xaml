@@ -70,7 +70,7 @@
 
                         <TextBox Text="{Binding CurrentName, UpdateSourceTrigger=PropertyChanged}" 
                                  Grid.Column="0" Padding="8" FontSize="14"
-                                 Background="#FF333333" Foreground="White" BorderBrush="#555" BorderThickness="1"/>
+                                 Background="#EAEAEA" Foreground="black" BorderBrush="#555" BorderThickness="1"/>
 
                         <Button Grid.Column="1" 
                                 Content="{Binding SaveButtonContent}" 

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:util="clr-namespace:StageX_DesktopApp.Utilities"
              xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
              mc:Ignorable="d"
              Background="#FF1A1A1A" Foreground="White"
@@ -99,20 +100,27 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <Style TargetType="TextBox" BasedOn="{StaticResource InputStyle}"/>
+        <Style TargetType="TextBox" BasedOn="{StaticResource InputStyle}">
+            <Setter Property="Background" Value="#EAEAEA"/>
+            <Setter Property="Foreground" Value="#FF1A1A1A"/>
+        </Style>
         <Style TargetType="ComboBox" BasedOn="{StaticResource InputStyle}">
             <Style.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="White"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}"/>
             </Style.Resources>
             <Setter Property="Foreground" Value="Black"/>
         </Style>
         <Style TargetType="DatePicker" BasedOn="{StaticResource InputStyle}">
             <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="#EAEAEA"/>
         </Style>
-
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#EAEAEA"/>
+            <Setter Property="Foreground" Value="black"/>
+        </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="Black"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="#EAEAEA"/>
             <Setter Property="Padding" Value="10,10"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -173,13 +181,49 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Giờ bắt đầu (HH:mm):" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <TextBox Text="{Binding StartTimeStr}" IsEnabled="{Binding IsDetailEditable}"/>
+                        <TextBlock Text="Thời gian diễn (Bắt đầu - Kết thúc):" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="60"/>
+
+                                <ColumnDefinition Width="20"/>
+
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="10"/>
+
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox Grid.Column="0" ItemsSource="{Binding HoursList}" SelectedItem="{Binding SelectedHour}" IsEnabled="{Binding IsDetailEditable}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0:00}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Grid.Column="1" Text=":" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold"/>
+
+                            <ComboBox Grid.Column="2" ItemsSource="{Binding MinutesList}" SelectedItem="{Binding SelectedMinute}" IsEnabled="{Binding IsDetailEditable}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0:00}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Grid.Column="4" Text="➔" VerticalAlignment="Center" Foreground="Gray"/>
+
+                            <TextBox Grid.Column="6" Text="{Binding EndTimeStr, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource InputStyle}" ToolTip="Giờ kết thúc (Tự động tính theo thời lượng)"/>
+                        </Grid>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Giá vé (VNĐ):" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <TextBox Text="{Binding PriceStr}" IsEnabled="{Binding IsDetailEditable}"/>
+                        <TextBox Text="{Binding PriceStr}" IsEnabled="{Binding IsDetailEditable}" util:TextBoxHelper.IsNumeric="True" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="4">

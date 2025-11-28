@@ -218,12 +218,7 @@ namespace StageX_DesktopApp.ViewModels
 
             if (IsCashPayment)
             {
-                // 1. Kiểm tra nhập liệu có phải số không
-                if (!decimal.TryParse(CashGiven, out decimal given)) 
-                { 
-                    MessageBox.Show("Vui lòng nhập số tiền hợp lệ!"); 
-                    return; 
-                }
+                decimal.TryParse(CashGiven, out decimal given);
 
                 // 2. [MỚI] Kiểm tra số tròn nghìn (Chia hết cho 1000)
                 if (given % 1000 != 0)

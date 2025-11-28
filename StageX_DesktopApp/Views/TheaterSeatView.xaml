@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:util="clr-namespace:StageX_DesktopApp.Utilities"
              xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
              mc:Ignorable="d"
              Background="#FF1A1A1A" Foreground="White"
@@ -53,8 +54,8 @@
 
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="6"/>
-            <Setter Property="Background" Value="#FF333333"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#EAEAEA"/>
+            <Setter Property="Foreground" Value="black"/>
             <Setter Property="BorderBrush" Value="#555"/>
         </Style>
         <Style TargetType="ComboBox">
@@ -100,11 +101,11 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,5,0">
                                     <TextBlock Text="Số hàng:" Margin="0,5,0,5" Foreground="Gray"/>
-                                    <TextBox Text="{Binding NewRows, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Text="{Binding NewRows, UpdateSourceTrigger=PropertyChanged}" util:TextBoxHelper.IsNumeric="True"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Margin="5,0,0,0">
                                     <TextBlock Text="Số cột:" Margin="0,5,0,5" Foreground="Gray"/>
-                                    <TextBox Text="{Binding NewCols, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Text="{Binding NewCols, UpdateSourceTrigger=PropertyChanged}" util:TextBoxHelper.IsNumeric="True"/>
                                 </StackPanel>
                             </Grid>
                             <Button Content="Xem trước sơ đồ" Style="{StaticResource ButtonSpecialStyle}" Margin="0,15,0,0" Command="{Binding PreviewNewTheaterCommand}"/>
@@ -185,7 +186,7 @@
                                     <TextBlock Text="Tên hạng ghế:" Margin="0,5,0,5" Foreground="Gray"/>
                                     <TextBox Text="{Binding CategoryName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                                     <TextBlock Text="Giá phụ thu:" Margin="0,5,0,5" Foreground="Gray"/>
-                                    <TextBox Text="{Binding CategoryPrice, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBox Text="{Binding CategoryPrice, UpdateSourceTrigger=PropertyChanged}" util:TextBoxHelper.IsNumeric="True"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Content="{Binding CategoryBtnContent}" Command="{Binding SaveCategoryCommand}" Style="{StaticResource ButtonAddStyle}" Height="90" Width="80"/>
                             </Grid>

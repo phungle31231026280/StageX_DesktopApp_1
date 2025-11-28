@@ -140,7 +140,6 @@ namespace StageX_DesktopApp.Views
                         gfx.DrawRectangle(XBrushes.White, barcodeX, y, w, 20);
                         barcodeX += w + rnd.Next(1, 3);
                     }
-                    y += 30;
                     gfx.DrawString("Cảm ơn quý khách!", fontSmall, textGray, new XRect(0, y, pageWidth, 10), XStringFormats.TopCenter);
                 }
 

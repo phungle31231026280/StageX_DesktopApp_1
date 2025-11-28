@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:util="clr-namespace:StageX_DesktopApp.Utilities"
              xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
              mc:Ignorable="d"
              Background="#FF1A1A1A" Foreground="White"
@@ -201,7 +202,8 @@
                         </Style>
                     </StackPanel.Style>
                     <TextBlock Text="Khách đưa:" Margin="0,0,0,5" />
-                    <TextBox Text="{Binding CashGiven, UpdateSourceTrigger=PropertyChanged}" Width="120" HorizontalAlignment="Left" Padding="5"/>
+                    <TextBlock Text="Khách đưa:" Margin="0,0,0,5" />
+                    <TextBox Text="{Binding CashGiven, UpdateSourceTrigger=PropertyChanged}" Width="120" HorizontalAlignment="Left" Padding="5" util:TextBoxHelper.IsNumeric="True" Background="#EAEAEA"/>
                     <TextBlock Text="Tiền thừa:" Margin="0,10,0,5" />
                     <TextBlock Text="{Binding ChangeText}" FontWeight="Bold" FontSize="16" Foreground="#FF198754"/>
                 </StackPanel>

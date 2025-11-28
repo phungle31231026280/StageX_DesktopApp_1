@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:util="clr-namespace:StageX_DesktopApp.Utilities"
              xmlns:vm="clr-namespace:StageX_DesktopApp.ViewModels"
              mc:Ignorable="d"
              Background="#FF1A1A1A" Foreground="White"
@@ -38,8 +39,8 @@
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="8"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Background" Value="#FF333333"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#EAEAEA"/>
+            <Setter Property="Foreground" Value="black"/>
             <Setter Property="BorderBrush" Value="#555"/>
             <Setter Property="CaretBrush" Value="White"/>
         </Style>
@@ -73,7 +74,7 @@
 
                     <StackPanel Grid.Column="1" Margin="0,0,10,0">
                         <TextBlock Text="Giá phụ thu (VNĐ):" Margin="0,0,0,5" Foreground="Gray"/>
-                        <TextBox Text="{Binding BasePriceStr, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding BasePriceStr, UpdateSourceTrigger=PropertyChanged}" util:TextBoxHelper.IsNumeric="True"/>
                     </StackPanel>
 
                     <Button Grid.Column="2" Content="{Binding SaveBtnContent}" 

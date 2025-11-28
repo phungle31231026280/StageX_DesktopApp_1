@@ -10,7 +10,7 @@ namespace StageX_DesktopApp.Services
         private static string _basePath = AppDomain.CurrentDomain.BaseDirectory;
 
         // Các hàm tiện ích gọi nhanh
-        public static void PlaySuccess() => PlaySound("success.mp3"); // Hoặc "success.wav"
+        public static void PlaySuccess() => PlaySound("success.mp3");
         public static void PlayError() => PlaySound("error.mp3");
         public static void PlayLogout() => PlaySound("log out.mp3");
         public static void PlayClick() => PlaySound("click.mp3");

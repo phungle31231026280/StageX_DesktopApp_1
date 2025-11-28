@@ -57,10 +57,9 @@ namespace StageX_DesktopApp.ViewModels
         [RelayCommand]
         private void PreviewNewTheater()
         {
-            if (!int.TryParse(NewRows, out int r) || !int.TryParse(NewCols, out int c) || r <= 0 || c <= 0)
-            {
-                MessageBox.Show("Số hàng/cột không hợp lệ!"); return;
-            }
+            int.TryParse(NewRows, out int r);
+            int.TryParse(NewCols, out int c);
+            
             if (string.IsNullOrWhiteSpace(NewTheaterName)) { MessageBox.Show("Nhập tên rạp!"); return; }
 
             IsEditing = true; IsCreatingNew = true; IsReadOnlyMode = false; SaveBtnContent = "Lưu rạp mới";
@@ -221,7 +220,8 @@ namespace StageX_DesktopApp.ViewModels
         private async Task SaveCategory()
         {
             string name = CategoryName.Trim();
-            if (string.IsNullOrEmpty(name) || !decimal.TryParse(CategoryPrice, out decimal price)) return;
+            if (string.IsNullOrEmpty(name)) return;
+            decimal.TryParse(CategoryPrice, out decimal price);
             var cat = new SeatCategory { CategoryId = EditingCategoryId, CategoryName = name, BasePrice = price };
             if (EditingCategoryId == 0) cat.ColorClass = "1ABC9C";
             await _dbService.SaveSeatCategoryAsync(cat);

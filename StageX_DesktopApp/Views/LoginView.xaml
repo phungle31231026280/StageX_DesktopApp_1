@@ -30,7 +30,8 @@
                 Margin="0,30,0,0" Padding="15" FontSize="16" FontWeight="Bold" Background="#FFffc107" Foreground="Black"
                 Command="{Binding LoginCommand}"
                 CommandParameter="{Binding ElementName=PasswordBox}"
-                IsEnabled="{Binding IsNotLoading}"/>
+                IsEnabled="{Binding IsNotLoading}"
+                IsDefault="True"/>
 
         <TextBlock Text="{Binding ErrorMessage}" 
                    Margin="0,15,0,0" 

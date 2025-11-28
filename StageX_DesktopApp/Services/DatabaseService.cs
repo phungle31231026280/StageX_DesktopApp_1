@@ -275,6 +275,7 @@ namespace StageX_DesktopApp.Services
         {
             using (var context = new AppDbContext())
             {
+                await context.Database.ExecuteSqlRawAsync("CALL proc_update_statuses()");
                 var query = context.Performances
                     .Include(p => p.Show)
                     .Include(p => p.Theater)
@@ -330,6 +331,7 @@ namespace StageX_DesktopApp.Services
                 }
 
                 await context.SaveChangesAsync();
+                await context.Database.ExecuteSqlRawAsync("CALL proc_update_statuses()");
             }
         }
 

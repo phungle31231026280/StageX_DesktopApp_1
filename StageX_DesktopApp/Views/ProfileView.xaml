@@ -18,8 +18,8 @@
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="10"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Background" Value="#FF333333"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#EAEAEA"/>
+            <Setter Property="Foreground" Value="black"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
     </UserControl.Resources>

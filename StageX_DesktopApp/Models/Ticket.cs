@@ -17,7 +17,7 @@ namespace StageX_DesktopApp.Models
         public int SeatId { get; set; }
 
         [Column("ticket_code")]
-        public string TicketCode { get; set; }
+        public long TicketCode { get; set; }
 
         [Column("status")]
         public string Status { get; set; }

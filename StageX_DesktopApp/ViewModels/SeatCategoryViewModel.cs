@@ -67,11 +67,7 @@ namespace StageX_DesktopApp.ViewModels
                 return;
             }
 
-            if (!decimal.TryParse(BasePriceStr, out decimal price))
-            {
-                MessageBox.Show("Giá phụ thu phải là số!");
-                return;
-            }
+            decimal.TryParse(BasePriceStr, out decimal price);
 
             try
             {
