@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 26, 2025 at 10:38 AM
+-- Generation Time: Nov 28, 2025 at 11:22 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -226,22 +226,38 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_theater` (IN `in_name` 
     SELECT new_tid AS theater_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_ticket` (IN `p_booking_id` INT, IN `p_seat_id` INT, IN `p_ticket_code` VARCHAR(20))   BEGIN
-   
+CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_ticket` (IN `p_booking_id` INT, IN `p_seat_id` INT)   BEGIN
     DECLARE v_performance_id INT;
+    DECLARE v_new_code BIGINT;
+    DECLARE v_exists INT DEFAULT 1;
 
+    -- Vòng lặp sinh mã để đảm bảo không trùng
+    WHILE v_exists > 0 DO
+        -- Sinh số ngẫu nhiên 13 chữ số
+        SET v_new_code = FLOOR(1000000000000 + RAND() * 8999999999999);
+        
+        -- Kiểm tra xem mã này đã tồn tại chưa
+        SELECT COUNT(*) INTO v_exists FROM tickets WHERE ticket_code = v_new_code;
+    END WHILE;
+
+    -- Thêm vé mới
     INSERT INTO tickets (booking_id, seat_id, ticket_code, status, created_at)
-    VALUES (p_booking_id, p_seat_id, p_ticket_code, 'Đang chờ', NOW());
+    VALUES (p_booking_id, p_seat_id, v_new_code, 'Đang chờ', NOW());
 
+    -- Cập nhật trạng thái ghế trong bảng seat_performance
     SELECT performance_id INTO v_performance_id
     FROM bookings
     WHERE booking_id = p_booking_id;
+
     IF v_performance_id IS NOT NULL THEN
         UPDATE seat_performance
         SET status = 'đã đặt'
         WHERE seat_id = p_seat_id
           AND performance_id = v_performance_id;
     END IF;
+    
+    -- Trả về mã vé vừa tạo (nếu cần dùng ngay)
+    SELECT v_new_code AS new_ticket_code;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_create_user` (IN `in_email` VARCHAR(255), IN `in_password` VARCHAR(255), IN `in_account_name` VARCHAR(100), IN `in_user_type` VARCHAR(20), IN `in_verified` TINYINT(1))   BEGIN
@@ -2093,7 +2109,19 @@ INSERT INTO `bookings` (`booking_id`, `user_id`, `performance_id`, `total_amount
 (998, NULL, 51, 2000000.000, 'Đã hoàn thành', '2025-11-27 01:09:00', 27),
 (999, NULL, 17, 1200000.000, 'Đã hoàn thành', '2025-11-27 09:25:00', 22),
 (1000, NULL, 42, 800000.000, 'Đã hoàn thành', '2025-11-27 16:44:00', 6),
-(1001, NULL, 51, 1425000.000, 'Đã hoàn thành', '2025-11-26 09:35:31', 6);
+(1001, NULL, 51, 1425000.000, 'Đã hoàn thành', '2025-11-26 09:35:31', 6),
+(1002, NULL, 18, 660000.000, 'Đã hoàn thành', '2025-11-27 18:41:50', 6),
+(1003, NULL, 18, 990000.000, 'Đã hoàn thành', '2025-11-27 20:23:57', 6),
+(1004, NULL, 18, 510000.000, 'Đã hoàn thành', '2025-11-27 20:25:54', 6),
+(1005, NULL, 18, 330000.000, 'Đã hoàn thành', '2025-11-27 20:39:01', 6),
+(1006, NULL, 18, 585000.000, 'Đã hoàn thành', '2025-11-27 21:12:36', 6),
+(1007, NULL, 18, 510000.000, 'Đã hoàn thành', '2025-11-27 21:12:51', 6),
+(1008, NULL, 18, 360000.000, 'Đã hoàn thành', '2025-11-27 21:15:56', 6),
+(1009, NULL, 18, 180000.000, 'Đã hoàn thành', '2025-11-27 21:16:04', 6),
+(1010, NULL, 18, 360000.000, 'Đã hoàn thành', '2025-11-27 21:46:11', 6),
+(1011, NULL, 51, 1500000.000, 'Đã hoàn thành', '2025-11-27 21:46:39', 6),
+(1012, NULL, 18, 360000.000, 'Đã hoàn thành', '2025-11-28 06:59:50', 6),
+(1013, NULL, 52, 860000.000, 'Đã hoàn thành', '2025-11-28 07:00:04', 6);
 
 -- --------------------------------------------------------
 
@@ -3153,7 +3181,19 @@ INSERT INTO `payments` (`payment_id`, `booking_id`, `amount`, `status`, `payment
 (998, 998, 2000000.000, 'Thành công', 'Tiền mặt', NULL, NULL, NULL, '2025-11-27 01:09:00', '2025-11-27 01:09:00'),
 (999, 999, 1200000.000, 'Thành công', 'Tiền mặt', NULL, NULL, NULL, '2025-11-27 09:25:00', '2025-11-27 09:25:00'),
 (1000, 1000, 800000.000, 'Thành công', 'Tiền mặt', NULL, NULL, NULL, '2025-11-27 16:44:00', '2025-11-27 16:44:00'),
-(1024, 1001, 1425000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-26 09:35:31', '2025-11-26 09:35:31');
+(1024, 1001, 1425000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-26 09:35:31', '2025-11-26 09:35:31'),
+(1025, 1002, 660000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-27 18:41:50', '2025-11-27 18:41:50'),
+(1026, 1003, 990000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-27 20:23:57', '2025-11-27 20:23:57'),
+(1027, 1004, 510000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-27 20:25:54', '2025-11-27 20:25:54'),
+(1028, 1005, 330000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-27 20:39:02', '2025-11-27 20:39:02'),
+(1029, 1006, 585000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-27 21:12:36', '2025-11-27 21:12:36'),
+(1030, 1007, 510000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-27 21:12:51', '2025-11-27 21:12:51'),
+(1031, 1008, 360000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-27 21:15:56', '2025-11-27 21:15:56'),
+(1032, 1009, 180000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-27 21:16:04', '2025-11-27 21:16:04'),
+(1033, 1010, 360000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-27 21:46:11', '2025-11-27 21:46:11'),
+(1034, 1011, 1500000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-27 21:46:39', '2025-11-27 21:46:39'),
+(1035, 1012, 360000.000, 'Thành công', 'Tiền mặt', '', NULL, NULL, '2025-11-28 06:59:50', '2025-11-28 06:59:50'),
+(1036, 1013, 860000.000, 'Thành công', 'Chuyển khoản', '', NULL, NULL, '2025-11-28 07:00:04', '2025-11-28 07:00:04');
 
 -- --------------------------------------------------------
 
@@ -3181,8 +3221,8 @@ CREATE TABLE `performances` (
 INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performance_date`, `start_time`, `end_time`, `status`, `price`, `created_at`, `updated_at`) VALUES
 (15, 8, 1, '2025-10-23', '19:30:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
 (16, 8, 2, '2025-10-26', '20:00:00', NULL, 'Đã kết thúc', 180000, '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
-(17, 8, 1, '2025-11-27', '19:30:00', NULL, 'Đang mở bán', 200000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
-(18, 8, 3, '2025-11-30', '18:00:00', NULL, 'Đang mở bán', 180000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
+(17, 8, 1, '2025-11-27', '19:30:00', NULL, 'Đã kết thúc', 200000, '2025-08-01 00:00:00', '2025-11-27 12:46:30'),
+(18, 8, 3, '2025-11-30', '18:00:00', '20:00:00', 'Đang mở bán', 180000, '2025-08-01 00:00:00', '2025-11-28 07:59:56'),
 (19, 9, 2, '2025-11-11', '19:00:00', NULL, 'Đã kết thúc', 150000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (20, 9, 3, '2025-11-13', '20:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (21, 9, 1, '2025-11-18', '19:00:00', NULL, 'Đã kết thúc', 150000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
@@ -3199,7 +3239,7 @@ INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performa
 (32, 12, 2, '2025-11-17', '19:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (33, 12, 1, '2025-11-19', '20:00:00', NULL, 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (34, 12, 3, '2025-11-24', '20:00:00', NULL, 'Đã kết thúc', 170000, '2025-08-01 00:00:00', '2025-11-24 15:36:25'),
-(35, 12, 2, '2025-11-26', '19:00:00', '20:44:00', 'Đang mở bán', 160000, '2025-08-01 00:00:00', '2025-11-24 17:33:58'),
+(35, 12, 2, '2025-11-26', '19:00:00', '20:44:00', 'Đã kết thúc', 160000, '2025-08-01 00:00:00', '2025-11-26 14:12:14'),
 (41, 18, 1, '2025-11-12', '19:30:00', '21:10:00', 'Đã kết thúc', 250000, '2025-11-04 13:08:55', '2025-11-22 11:47:10'),
 (42, 18, 2, '2025-11-14', '20:00:00', '21:40:00', 'Đã kết thúc', 200000, '2025-11-04 13:09:41', '2025-11-22 11:47:10'),
 (43, 18, 3, '2025-11-15', '20:00:00', '21:40:00', 'Đã kết thúc', 200000, '2025-11-04 13:10:13', '2025-11-22 11:47:10'),
@@ -3210,7 +3250,7 @@ INSERT INTO `performances` (`performance_id`, `show_id`, `theater_id`, `performa
 (48, 19, 1, '2025-11-21', '19:30:00', '21:15:00', 'Đã kết thúc', 250000, '2025-11-04 13:13:48', '2025-11-22 11:47:10'),
 (49, 13, 1, '2025-11-23', '19:30:00', '21:05:00', 'Đã kết thúc', 350000, '2025-11-04 13:41:51', '2025-11-23 15:05:42'),
 (50, 13, 2, '2025-11-24', '20:00:00', '21:35:00', 'Đã kết thúc', 300000, '2025-11-04 13:42:37', '2025-11-24 15:36:25'),
-(51, 17, 3, '2025-11-28', '19:30:00', '21:25:00', 'Đang mở bán', 350000, '2025-11-04 13:43:57', '2025-11-04 13:43:57'),
+(51, 17, 2, '2025-11-28', '19:30:00', '21:25:00', 'Đang mở bán', 350000, '2025-11-04 13:43:57', '2025-11-27 18:55:19'),
 (52, 17, 2, '2025-11-29', '20:00:00', '21:55:00', 'Đang mở bán', 280000, '2025-11-04 13:44:19', '2025-11-04 13:44:19');
 
 -- --------------------------------------------------------
@@ -3362,15 +3402,7 @@ INSERT INTO `seats` (`seat_id`, `theater_id`, `category_id`, `row_char`, `seat_n
 (214, 2, 1, 'A', 8, 8, '2025-11-17 18:58:14'),
 (215, 2, 1, 'B', 8, 8, '2025-11-17 18:58:14'),
 (216, 2, 2, 'C', 8, 8, '2025-11-17 18:58:14'),
-(217, 2, 1, 'D', 8, 8, '2025-11-17 18:58:14'),
-(347, 7, 2, 'A', 1, 1, '2025-11-24 18:30:56'),
-(348, 7, 2, 'A', 2, 2, '2025-11-24 18:30:56'),
-(349, 7, 1, 'A', 3, 3, '2025-11-24 18:30:56'),
-(350, 7, 1, 'A', 4, 4, '2025-11-24 18:30:56'),
-(351, 7, 2, 'B', 1, 1, '2025-11-24 18:30:56'),
-(352, 7, 2, 'B', 2, 2, '2025-11-24 18:30:56'),
-(353, 7, 1, 'B', 3, 3, '2025-11-24 18:30:56'),
-(354, 7, 1, 'B', 4, 4, '2025-11-24 18:30:56');
+(217, 2, 1, 'D', 8, 8, '2025-11-17 18:58:14');
 
 -- --------------------------------------------------------
 
@@ -4121,7 +4153,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (55, 42, 'trống'),
 (55, 45, 'trống'),
 (55, 50, 'đã đặt'),
-(55, 52, 'trống'),
+(55, 52, 'đã đặt'),
 (56, 16, 'đã đặt'),
 (56, 19, 'trống'),
 (56, 22, 'trống'),
@@ -4132,7 +4164,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (56, 42, 'trống'),
 (56, 45, 'trống'),
 (56, 50, 'đã đặt'),
-(56, 52, 'trống'),
+(56, 52, 'đã đặt'),
 (57, 16, 'trống'),
 (57, 19, 'trống'),
 (57, 22, 'trống'),
@@ -4362,7 +4394,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (77, 43, 'trống'),
 (77, 47, 'trống'),
 (77, 51, 'trống'),
-(78, 18, 'trống'),
+(78, 18, 'đã đặt'),
 (78, 20, 'trống'),
 (78, 23, 'trống'),
 (78, 27, 'đã đặt'),
@@ -4380,7 +4412,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (79, 43, 'trống'),
 (79, 47, 'trống'),
 (79, 51, 'đã đặt'),
-(80, 18, 'trống'),
+(80, 18, 'đã đặt'),
 (80, 20, 'trống'),
 (80, 23, 'trống'),
 (80, 27, 'đã đặt'),
@@ -4389,7 +4421,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (80, 43, 'trống'),
 (80, 47, 'trống'),
 (80, 51, 'đã đặt'),
-(81, 18, 'trống'),
+(81, 18, 'đã đặt'),
 (81, 20, 'trống'),
 (81, 23, 'trống'),
 (81, 27, 'đã đặt'),
@@ -4424,8 +4456,8 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (84, 34, 'trống'),
 (84, 43, 'trống'),
 (84, 47, 'trống'),
-(84, 51, 'trống'),
-(85, 18, 'trống'),
+(84, 51, 'đã đặt'),
+(85, 18, 'đã đặt'),
 (85, 20, 'trống'),
 (85, 23, 'trống'),
 (85, 27, 'trống'),
@@ -4433,8 +4465,8 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (85, 34, 'đã đặt'),
 (85, 43, 'trống'),
 (85, 47, 'trống'),
-(85, 51, 'trống'),
-(86, 18, 'trống'),
+(85, 51, 'đã đặt'),
+(86, 18, 'đã đặt'),
 (86, 20, 'trống'),
 (86, 23, 'trống'),
 (86, 27, 'trống'),
@@ -4442,8 +4474,8 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (86, 34, 'đã đặt'),
 (86, 43, 'trống'),
 (86, 47, 'trống'),
-(86, 51, 'trống'),
-(87, 18, 'trống'),
+(86, 51, 'đã đặt'),
+(87, 18, 'đã đặt'),
 (87, 20, 'trống'),
 (87, 23, 'trống'),
 (87, 27, 'đã đặt'),
@@ -4452,7 +4484,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (87, 43, 'trống'),
 (87, 47, 'trống'),
 (87, 51, 'trống'),
-(88, 18, 'trống'),
+(88, 18, 'đã đặt'),
 (88, 20, 'đã đặt'),
 (88, 23, 'trống'),
 (88, 27, 'đã đặt'),
@@ -4461,7 +4493,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (88, 43, 'trống'),
 (88, 47, 'trống'),
 (88, 51, 'đã đặt'),
-(89, 18, 'trống'),
+(89, 18, 'đã đặt'),
 (89, 20, 'đã đặt'),
 (89, 23, 'trống'),
 (89, 27, 'đã đặt'),
@@ -4470,7 +4502,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (89, 43, 'trống'),
 (89, 47, 'trống'),
 (89, 51, 'trống'),
-(90, 18, 'trống'),
+(90, 18, 'đã đặt'),
 (90, 20, 'trống'),
 (90, 23, 'đã đặt'),
 (90, 27, 'đã đặt'),
@@ -4479,7 +4511,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (90, 43, 'trống'),
 (90, 47, 'trống'),
 (90, 51, 'trống'),
-(91, 18, 'trống'),
+(91, 18, 'đã đặt'),
 (91, 20, 'đã đặt'),
 (91, 23, 'trống'),
 (91, 27, 'trống'),
@@ -4497,7 +4529,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (92, 43, 'trống'),
 (92, 47, 'trống'),
 (92, 51, 'trống'),
-(93, 18, 'trống'),
+(93, 18, 'đã đặt'),
 (93, 20, 'trống'),
 (93, 23, 'trống'),
 (93, 27, 'đã đặt'),
@@ -4506,7 +4538,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (93, 43, 'trống'),
 (93, 47, 'trống'),
 (93, 51, 'trống'),
-(94, 18, 'trống'),
+(94, 18, 'đã đặt'),
 (94, 20, 'trống'),
 (94, 23, 'trống'),
 (94, 27, 'trống'),
@@ -4515,7 +4547,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (94, 43, 'trống'),
 (94, 47, 'trống'),
 (94, 51, 'đã đặt'),
-(95, 18, 'trống'),
+(95, 18, 'đã đặt'),
 (95, 20, 'đã đặt'),
 (95, 23, 'trống'),
 (95, 27, 'đã đặt'),
@@ -4533,7 +4565,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (96, 43, 'trống'),
 (96, 47, 'trống'),
 (96, 51, 'trống'),
-(97, 18, 'trống'),
+(97, 18, 'đã đặt'),
 (97, 20, 'trống'),
 (97, 23, 'đã đặt'),
 (97, 27, 'trống'),
@@ -4542,7 +4574,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (97, 43, 'trống'),
 (97, 47, 'trống'),
 (97, 51, 'trống'),
-(98, 18, 'trống'),
+(98, 18, 'đã đặt'),
 (98, 20, 'trống'),
 (98, 23, 'trống'),
 (98, 27, 'trống'),
@@ -4560,7 +4592,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (99, 43, 'trống'),
 (99, 47, 'trống'),
 (99, 51, 'trống'),
-(100, 18, 'trống'),
+(100, 18, 'đã đặt'),
 (100, 20, 'trống'),
 (100, 23, 'trống'),
 (100, 27, 'trống'),
@@ -4569,7 +4601,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (100, 43, 'trống'),
 (100, 47, 'trống'),
 (100, 51, 'trống'),
-(101, 18, 'trống'),
+(101, 18, 'đã đặt'),
 (101, 20, 'trống'),
 (101, 23, 'trống'),
 (101, 27, 'đã đặt'),
@@ -4596,7 +4628,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (103, 43, 'trống'),
 (103, 47, 'trống'),
 (103, 51, 'đã đặt'),
-(104, 18, 'trống'),
+(104, 18, 'đã đặt'),
 (104, 20, 'trống'),
 (104, 23, 'trống'),
 (104, 27, 'trống'),
@@ -4614,7 +4646,7 @@ INSERT INTO `seat_performance` (`seat_id`, `performance_id`, `status`) VALUES
 (105, 43, 'trống'),
 (105, 47, 'trống'),
 (105, 51, 'trống'),
-(106, 18, 'trống'),
+(106, 18, 'đã đặt'),
 (106, 20, 'đã đặt'),
 (106, 23, 'trống'),
 (106, 27, 'đã đặt'),
@@ -4651,7 +4683,7 @@ INSERT INTO `shows` (`show_id`, `title`, `description`, `duration_minutes`, `dir
 (9, 'Gánh Cỏ Sông Hàn', 'Lấy bối cảnh miền Trung những năm sau chiến tranh, vở kịch khắc họa số phận những con người mưu sinh bên bến sông Hàn, với tình người chan chứa giữa cuộc đời đầy nhọc nhằn.', 110, 'Trần Thị Mai', 'assets/images/ganh-co-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-22 11:47:10'),
 (10, 'Làng Song Sinh', 'Một ngôi làng kỳ bí nơi những cặp song sinh liên tục chào đời. Bí mật phía sau sự trùng hợp ấy dần hé lộ, để rồi đẩy người xem vào những tình huống ly kỳ và ám ảnh.', 100, 'Lê Hoàng Nam', 'assets/images/lang-song-sinh-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-26 04:15:26'),
 (11, 'Lôi Vũ', 'Một trong những vở kịch nổi tiếng nhất thế kỷ XX, “Lôi Vũ” phơi bày những mâu thuẫn giai cấp, đạo đức và gia đình trong xã hội cũ. Vở diễn mang đến sự lay động mạnh mẽ và dư âm lâu dài.', 140, 'Phạm Quang Dũng', 'assets/images/loi-vu.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-23 13:35:03'),
-(12, 'Ngôi Nhà Trong Mây', 'Một câu chuyện thơ mộng về tình yêu và khát vọng sống, nơi con người tìm đến “ngôi nhà trong mây” để trốn chạy thực tại. Nhưng rồi họ nhận ra: hạnh phúc thật sự chỉ đến khi dám đối diện với chính mình.', 104, 'Vũ Thảo My', 'assets/images/ngoi-nha-trong-may-poster.jpg', 'Đang chiếu', '2025-08-01 00:00:00', '2025-08-01 00:00:00'),
+(12, 'Ngôi Nhà Trong Mây', 'Một câu chuyện thơ mộng về tình yêu và khát vọng sống, nơi con người tìm đến “ngôi nhà trong mây” để trốn chạy thực tại. Nhưng rồi họ nhận ra: hạnh phúc thật sự chỉ đến khi dám đối diện với chính mình.', 104, 'Vũ Thảo My', 'assets/images/ngoi-nha-trong-may-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-26 14:12:14'),
 (13, 'Tấm Cám Đại Chiến', 'Phiên bản hiện đại, vui nhộn và đầy sáng tạo của truyện cổ tích “Tấm Cám”. Với yếu tố gây cười, châm biếm và bất ngờ, vở diễn mang đến những phút giây giải trí thú vị cho cả gia đình.', 95, 'Hoàng Anh Tú', 'assets/images/tam-cam-poster.jpg', 'Đã kết thúc', '2025-08-01 00:00:00', '2025-11-24 15:36:25'),
 (14, 'Má ơi út dìa', 'Câu chuyện cảm động về tình mẫu tử và nỗi day dứt của người con xa quê. Những ký ức, những tiếng gọi “Má ơi” trở thành sợi dây kết nối quá khứ và hiện tại.', 110, 'Nguyễn Thị Thanh Hương', 'assets/images/ma-oi-ut-dia-poster.png', 'Đã kết thúc', '2025-11-04 12:37:19', '2025-11-24 07:07:01'),
 (15, 'Tía ơi má dìa', 'Một vở kịch hài – tình cảm về những hiểu lầm, giận hờn và yêu thương trong một gia đình miền Tây. Tiếng cười và nước mắt đan xen tạo nên cảm xúc sâu lắng.', 100, 'Trần Hoài Phong', 'assets/images/tia-oi-ma-dia-poster.jpg', 'Đã kết thúc', '2025-11-04 12:40:24', '2025-11-24 07:07:01'),
@@ -4793,8 +4825,7 @@ CREATE TABLE `theaters` (
 INSERT INTO `theaters` (`theater_id`, `name`, `total_seats`, `created_at`, `status`) VALUES
 (1, 'Main Hall', 52, '2025-10-03 16:14:11', 'Đã hoạt động'),
 (2, 'Black Box', 32, '2025-10-03 16:14:22', 'Đã hoạt động'),
-(3, 'Studio', 30, '2025-10-03 16:14:32', 'Đã hoạt động'),
-(7, 'Luxury', 8, '2025-11-24 18:30:56', 'Đã hoạt động');
+(3, 'Studio', 30, '2025-10-03 16:14:32', 'Đã hoạt động');
 
 -- --------------------------------------------------------
 
@@ -4806,7 +4837,7 @@ CREATE TABLE `tickets` (
   `ticket_id` int(11) NOT NULL,
   `booking_id` int(11) NOT NULL,
   `seat_id` int(11) NOT NULL,
-  `ticket_code` varchar(50) NOT NULL,
+  `ticket_code` bigint(20) NOT NULL,
   `status` enum('Đang chờ','Hợp lệ','Đã sử dụng','Đã hủy') NOT NULL DEFAULT 'Đang chờ',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -4816,9 +4847,33 @@ CREATE TABLE `tickets` (
 --
 
 INSERT INTO `tickets` (`ticket_id`, `booking_id`, `seat_id`, `ticket_code`, `status`, `created_at`) VALUES
-(1, 1001, 82, '0B7568B3', 'Đang chờ', '2025-11-26 09:35:31'),
-(2, 1001, 88, '2C434A6A', 'Đang chờ', '2025-11-26 09:35:31'),
-(3, 1001, 94, 'F9C1DFB1', 'Đang chờ', '2025-11-26 09:35:31');
+(1, 1001, 82, 2407093170477, 'Đang chờ', '2025-11-26 09:35:31'),
+(2, 1001, 88, 8911093521779, 'Đang chờ', '2025-11-26 09:35:31'),
+(3, 1001, 94, 9334188374069, 'Đang chờ', '2025-11-26 09:35:31'),
+(4, 1002, 80, 9937661581613, 'Đang chờ', '2025-11-27 18:41:50'),
+(5, 1002, 81, 2685743062464, 'Đang chờ', '2025-11-27 18:41:50'),
+(6, 1003, 86, 9615730844079, 'Đang chờ', '2025-11-27 20:23:57'),
+(7, 1003, 87, 3021425309610, 'Đang chờ', '2025-11-27 20:23:57'),
+(8, 1003, 88, 3259934292416, 'Đang chờ', '2025-11-27 20:23:57'),
+(9, 1004, 93, 6235395809854, 'Đang chờ', '2025-11-27 20:25:54'),
+(10, 1004, 94, 2397176448625, 'Đang chờ', '2025-11-27 20:25:54'),
+(11, 1005, 78, 1279695090166, 'Đang chờ', '2025-11-27 20:39:02'),
+(12, 1006, 85, 7206946381559, 'Đang chờ', '2025-11-27 21:12:36'),
+(13, 1006, 91, 4195646913904, 'Đang chờ', '2025-11-27 21:12:36'),
+(14, 1007, 89, 7357395701442, 'Đang chờ', '2025-11-27 21:12:51'),
+(15, 1007, 90, 5200038042105, 'Đang chờ', '2025-11-27 21:12:51'),
+(16, 1008, 97, 2928003382801, 'Đang chờ', '2025-11-27 21:15:56'),
+(17, 1008, 98, 7039903064294, 'Đang chờ', '2025-11-27 21:15:56'),
+(18, 1009, 100, 7415505449673, 'Đang chờ', '2025-11-27 21:16:04'),
+(19, 1010, 95, 5957818332088, 'Đang chờ', '2025-11-27 21:46:11'),
+(20, 1010, 101, 6542575588023, 'Đang chờ', '2025-11-27 21:46:11'),
+(21, 1011, 84, 4839423220454, 'Đang chờ', '2025-11-27 21:46:39'),
+(22, 1011, 85, 3569389614806, 'Đang chờ', '2025-11-27 21:46:39'),
+(23, 1011, 86, 2328678689271, 'Đang chờ', '2025-11-27 21:46:39'),
+(24, 1012, 104, 8935224878540, 'Đang chờ', '2025-11-28 06:59:50'),
+(25, 1012, 106, 9690088601493, 'Đang chờ', '2025-11-28 06:59:50'),
+(26, 1013, 55, 2644768648449, 'Đang chờ', '2025-11-28 07:00:04'),
+(27, 1013, 56, 1153577714370, 'Đang chờ', '2025-11-28 07:00:04');
 
 -- --------------------------------------------------------
 
@@ -4847,14 +4902,16 @@ INSERT INTO `users` (`user_id`, `email`, `password`, `account_name`, `user_type`
 (2, 'trangltmt1509@gmail.com', '$2y$10$0doy81SVgcSvSwMD/VBK2OGfKf6yIVFEnCmzZYR15PjSq/yGz8p.C', 'trale', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (3, 'hoaithunguyen066@gmail.com', '$2y$10$6pjx5wsk.tW3icop/RZjWu0nMUqs61OhljS8NttNHqOxG2yP/sZdK', 'ht1123', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (4, 'nguyenthithuytrang2020bd@gmail.com', '$2y$10$qEOSBdHhLThH6gneJ2tki.YIdoFCGM7wsBScXYAZ7sgZpDUIuLKSW', 'nguyenna', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
-(6, 'trangle.31231026559@st.ueh.edu.vn', '$2a$11$rQLnW9pUE37ZwSEw9dGJMOJjgfLL030/8s7WdfqamM4.nq6.HM/dW', 'trangle', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
-(7, 'admin@example.com', '$2a$11$DdN7GNbBhFyWRYFuKArD7.BfmqgzIpLYXkp7B6SgJBFnLDk5ZCmfG', 'Admin', 'Admin', 'hoạt động', 1, NULL, NULL),
+(6, 'trangle.31231026559@st.ueh.edu.vn', '$2a$11$eomc40N0cv3Ylmr2AA0tEu5DDSvkAc1BWdYVQLK8181DGbCo.7Hgq', 'trangle', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
+(7, 'admin@example.com', '$2a$11$JTJZtd3qxD9zZ3J9qNPdduuSauAEBc/fQubS7t/Ai8jjDfHe69qbe', 'Admin', 'Admin', 'hoạt động', 1, NULL, NULL),
 (19, 'minarmy1509@gmail.com', '$2y$10$WmOFFFccY97IjoBtyNQvRufjZLc4MkquHvWOLCSjIn2EIgv.li3my', 'nana', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (20, 'nguyenhoaithu2019pm@gmail.com', '$2y$10$QVaUYDI.e5LWa6G6yqBcHOhHkIr8sez1ze2TMGPWYYMVe29/3caka', 'thele', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (21, 'thuytrang2020bd@gmail.com', '$2y$10$n5UURYh9PjaT9p/zhnD/XuRgILBxbsonGWch13ztBpOP8hjQm7IoG', 'hieunguyen', 'Khách hàng', 'hoạt động', 1, NULL, NULL),
 (22, 'trangnguyen.31231026201@st.ueh.edu.vn', '$2a$11$ndW2z6oNM4zTpgdZ8Cri4.GbhGEIwnuT/OJZ/EnMMp1QIHxnc0lOO', 'thuytrang', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
 (27, 'thunguyen.31231026200@ueh.edu.vn', '$2a$11$qvmNfvCHabyYkC/DUPE1eOtlJkQhEUf0GfuxF.A0Gk5azhiZkiZ36', 'hoaithu', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
-(28, 'ngocduong.31231024139@st.ueh.edu.vn', '$2a$11$5VkZcBouRzHQVgs//GPuFeWf7UaWXdUlEnN2zA8FrNSvSsMddlg/i', 'thanhngoc', 'Nhân viên', 'hoạt động', 1, NULL, NULL);
+(28, 'ngocduong.31231024139@st.ueh.edu.vn', '$2a$11$5VkZcBouRzHQVgs//GPuFeWf7UaWXdUlEnN2zA8FrNSvSsMddlg/i', 'thanhngoc', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
+(34, 'ddd@gmail', '$2a$11$9BbOEUGJ5Jxl8MgSgKbiIe5gOmMmZzUcUN7HiyUWDt4Md8wg0JcE6', 'dd', 'Nhân viên', 'hoạt động', 1, NULL, NULL),
+(35, '113@gmail', '$2a$11$h3nekPEs4IqYVnTMLOk3eu65ai.sfA5hNEf0lv.vyhs1qUuLOovG6', 'dddd', 'Admin', 'hoạt động', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -4879,8 +4936,8 @@ INSERT INTO `user_detail` (`user_id`, `full_name`, `date_of_birth`, `address`, `
 (2, 'Lê Minh Anh', '2005-09-10', NULL, NULL),
 (3, 'Nguyễn Hà Thi', '2005-08-01', NULL, NULL),
 (4, 'Nguyễn Thùy Trinh', '2005-03-12', NULL, NULL),
-(6, 'Lê Thị Mỹ Trang', '2025-11-24', '', ''),
-(7, 'Le My Phung', '2025-11-22', '', ''),
+(6, 'Lê Thị Mỹ Trang', '2025-11-24', 'QN', ''),
+(7, 'Le My Phung', '2025-11-22', 'BD', ''),
 (19, 'Nguyễn Thị Na', '2003-11-12', NULL, NULL),
 (20, 'Lê Thùy Linh', '2001-12-12', NULL, NULL),
 (21, 'Nguyễn Văn Hiếu', '2001-12-12', NULL, NULL),
@@ -5017,31 +5074,31 @@ ALTER TABLE `user_detail`
 -- AUTO_INCREMENT for table `actors`
 --
 ALTER TABLE `actors`
-  MODIFY `actor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `actor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1002;
+  MODIFY `booking_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1014;
 
 --
 -- AUTO_INCREMENT for table `genres`
 --
 ALTER TABLE `genres`
-  MODIFY `genre_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `genre_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1025;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1037;
 
 --
 -- AUTO_INCREMENT for table `performances`
 --
 ALTER TABLE `performances`
-  MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `performance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -5053,37 +5110,37 @@ ALTER TABLE `reviews`
 -- AUTO_INCREMENT for table `seats`
 --
 ALTER TABLE `seats`
-  MODIFY `seat_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=355;
+  MODIFY `seat_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=400;
 
 --
 -- AUTO_INCREMENT for table `seat_categories`
 --
 ALTER TABLE `seat_categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `shows`
 --
 ALTER TABLE `shows`
-  MODIFY `show_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `show_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `theaters`
 --
 ALTER TABLE `theaters`
-  MODIFY `theater_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `theater_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `tickets`
 --
 ALTER TABLE `tickets`
-  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- Constraints for dumped tables

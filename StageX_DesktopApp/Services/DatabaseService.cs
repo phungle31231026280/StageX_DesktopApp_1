@@ -664,16 +664,18 @@ namespace StageX_DesktopApp.Services
         {
             using (var context = new AppDbContext())
             {
-                // Tạo Payment
+                // 1. Tạo Payment (Giữ nguyên)
+                // Lưu ý: Cú pháp Interpolated bên dưới cần sửa lại chuỗi cho đúng chuẩn C#
                 await context.Database.ExecuteSqlInterpolatedAsync(
-                    $"CALL proc_create_payment({bookingId}, {total}, {"Thành công"}, {""}, {method})");
+                    $"CALL proc_create_payment({bookingId}, {total}, 'Thành công', '', {method})");
 
-                // Tạo Tickets
+                // 2. Tạo Tickets (ĐÃ SỬA)
                 foreach (var seatId in seatIds)
                 {
-                    string code = Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+                    // Không cần generate code ở C# nữa
+                    // Gọi SP chỉ với 2 tham số: bookingId và seatId
                     await context.Database.ExecuteSqlInterpolatedAsync(
-                        $"CALL proc_create_ticket({bookingId}, {seatId}, {code})");
+                        $"CALL proc_create_ticket({bookingId}, {seatId})");
                 }
             }
         }
