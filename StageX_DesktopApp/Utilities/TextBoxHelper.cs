@@ -46,17 +46,6 @@ namespace StageX_DesktopApp.Utilities
                 e.Handled = true;
                 return;
             }
-
-            // 2. [MỚI] Chặn số 0 nếu nó được nhập ở vị trí đầu tiên
-            // (Nghĩa là ngăn chặn nhập "0", "01", "05"...)
-            if (e.Text == "0")
-            {
-                // Nếu con trỏ đang ở đầu dòng (CaretIndex == 0) -> Chặn
-                if (textBox.CaretIndex == 0)
-                {
-                    e.Handled = true;
-                }
-            }
         }
 
         // Chặn phím Space

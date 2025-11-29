@@ -63,7 +63,7 @@
 
             <StackPanel Grid.Column="2">
                 <TextBlock Text="Ngày sinh"/>
-                <DatePicker SelectedDate="{Binding DateOfBirth}" Padding="8" FontSize="14"/>
+                <DatePicker SelectedDate="{Binding DateOfBirth}" Padding="8" FontSize="14" Background="#EAEAEA"/>
                 <TextBlock Text="Số điện thoại (tùy chọn)"/>
                 <TextBox Text="{Binding Phone}"/>
             </StackPanel>

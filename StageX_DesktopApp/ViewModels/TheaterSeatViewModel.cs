@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using StageX_DesktopApp.Models;
 using StageX_DesktopApp.Services;
 using System;
@@ -8,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using static StageX_DesktopApp.ViewModels.SeatCategoryViewModel;
 
 namespace StageX_DesktopApp.ViewModels
 {
@@ -44,8 +46,17 @@ namespace StageX_DesktopApp.ViewModels
         {
             _dbService = new DatabaseService();
             Application.Current.Dispatcher.InvokeAsync(async () => await LoadData());
+            WeakReferenceMessenger.Default.RegisterAll(this);
         }
-
+        public void Receive(SeatCategoryChangedMessage message)
+        {
+            // Tải lại danh sách Categories để ComboBox cập nhật mới nhất
+            Task.Run(async () =>
+            {
+                var cList = await _dbService.GetSeatCategoriesAsync();
+                Application.Current.Dispatcher.Invoke(() => Categories = new ObservableCollection<SeatCategory>(cList));
+            });
+        }
         private async Task LoadData()
         {
             var tList = await _dbService.GetTheatersWithStatusAsync();

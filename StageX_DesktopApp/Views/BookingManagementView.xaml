@@ -54,7 +54,6 @@
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Background" Value="#EAEAEA"/>
             <Setter Property="Foreground" Value="black"/>
-            <Setter Property="CaretBrush" Value="White"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#555"/>
         </Style>
@@ -119,7 +118,7 @@
 
             <DataGrid.Columns>
                 <DataGridTextColumn Header="MÃ ĐƠN" Binding="{Binding BookingId}" Width="80" FontWeight="Bold"/>
-                <DataGridTextColumn Header="KHÁCH HÀNH" Binding="{Binding CustomerName}" Width="1.2*"/>
+                <DataGridTextColumn Header="KHÁCH HÀNG" Binding="{Binding CustomerName}" Width="1.2*"/>
                 <DataGridTextColumn Header="NGƯỜI LẬP" Binding="{Binding CreatorName}" Width="1.2*"/>
                 <DataGridTextColumn Header="VỞ DIỄN" Binding="{Binding ShowTitle}" Width="1.5*"/>
                 <DataGridTextColumn Header="SUẤT DIỄN" Binding="{Binding PerformanceTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="140"/>

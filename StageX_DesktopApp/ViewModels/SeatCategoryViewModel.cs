@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using StageX_DesktopApp.Models;
 using StageX_DesktopApp.Services;
 using System;
@@ -27,6 +28,12 @@ namespace StageX_DesktopApp.ViewModels
         {
             _dbService = new DatabaseService();
             LoadCategoriesCommand.Execute(null);
+            WeakReferenceMessenger.Default.RegisterAll(this);
+        }
+        public class SeatCategoryChangedMessage
+        {
+            public string Value { get; }
+            public SeatCategoryChangedMessage(string value) => Value = value;
         }
 
         [RelayCommand]
@@ -88,7 +95,9 @@ namespace StageX_DesktopApp.ViewModels
 
                 MessageBox.Show(CategoryId > 0 ? "Cập nhật thành công!" : "Thêm mới thành công!");
                 Cancel(); // Reset form
+                WeakReferenceMessenger.Default.Send(new SeatCategoryChangedMessage("Updated"));
                 await LoadCategories(); // Tải lại bảng
+
             }
             catch (Exception ex)
             {

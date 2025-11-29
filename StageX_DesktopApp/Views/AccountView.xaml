@@ -15,67 +15,95 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <Style x:Key="ButtonAddStyle" TargetType="Button">
+        <Style x:Key="ButtonBaseStyle" TargetType="Button">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.8"/>
+
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ButtonAddStyle" TargetType="Button" BasedOn="{StaticResource ButtonBaseStyle}">
             <Setter Property="Background" Value="#FF198754"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
-        <Style x:Key="ButtonEditStyle" TargetType="Button">
+        <Style x:Key="ButtonEditStyle" TargetType="Button" BasedOn="{StaticResource ButtonBaseStyle}">
             <Setter Property="Background" Value="#FF0D6EFD"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
-        <Style x:Key="ButtonDeleteStyle" TargetType="Button">
+        <Style x:Key="ButtonDeleteStyle" TargetType="Button" BasedOn="{StaticResource ButtonBaseStyle}">
             <Setter Property="Background" Value="#FFDC3545"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8,3"/>
+        </Style>
+        <Style x:Key="ButtonNormalStyle" TargetType="Button" BasedOn="{StaticResource ButtonBaseStyle}">
+            <Setter Property="Background" Value="#FF6C757D"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
 
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="FontSize" Value="14"/>
+        <Style TargetType="Control" x:Key="InputStyle">
             <Setter Property="Background" Value="#EAEAEA"/>
             <Setter Property="Foreground" Value="black"/>
-            <Setter Property="BorderBrush" Value="#555"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBox" BasedOn="{StaticResource InputStyle}">
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="Gray"/>
+                    <Setter Property="Foreground" Value="#EAEAEA"/>
                     <Setter Property="Background" Value="#FF222222"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
-
-        <Style TargetType="PasswordBox">
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Background" Value="#EAEAEA"/>
-            <Setter Property="Foreground" Value="black"/>
-            <Setter Property="BorderBrush" Value="#555"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#FF222222"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="ComboBox">
-            <Style.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="White"/>
-            </Style.Resources>
+        
+        <Style TargetType="ComboBox" BasedOn="{StaticResource InputStyle}">
             <Setter Property="Foreground" Value="Black"/>
+        </Style>
+
+        <Style TargetType="PasswordBox" BasedOn="{StaticResource InputStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#FF222222"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="Black"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Padding" Value="10,12"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CenterCell" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="LeftCell" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="5,0"/>
         </Style>
     </UserControl.Resources>
 
@@ -139,13 +167,9 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-                        <Button Content="{Binding SaveBtnContent}" Style="{StaticResource ButtonAddStyle}" 
-                                Command="{Binding SaveCommand}" CommandParameter="{Binding ElementName=PasswordBox}" Width="145"/>
-
-                        <Button Content="Hủy" Margin="10,0,0,0" Padding="10,5" Background="Gray" Foreground="White" BorderThickness="0"
-                                Command="{Binding ClearCommand}"
-                                Visibility="{Binding IsClearVisible, Converter={StaticResource BoolToVis}}" Width="136"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <Button Content="{Binding SaveButtonContent}" Command="{Binding SaveCommand}" Style="{StaticResource ButtonAddStyle}" Width="160" Height="32"/>
+                        <Button Content="Làm mới / Hủy" Command="{Binding ClearCommand}" Style="{StaticResource ButtonNormalStyle}" Margin="10,0,0,0" Width="160" Height="32"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -154,29 +178,32 @@
         <TextBlock Grid.Row="2" Text="DANH SÁCH TÀI KHOẢN" FontSize="18" FontWeight="SemiBold" Foreground="#FFffc107" Margin="0,20,0,10"/>
 
         <DataGrid Grid.Row="3" ItemsSource="{Binding Accounts}"
-                  IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
-                  Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" HeadersVisibility="Column"
-                  RowHeaderWidth="0">
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+Background="Transparent" RowBackground="Transparent" 
+Foreground="White" BorderThickness="0"
+GridLinesVisibility="All" HorizontalGridLinesBrush="#333" VerticalGridLinesBrush="#333"
+RowHeaderWidth="0" HeadersVisibility="Column"
+RowHeight="30">
 
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding UserId}" Width="50" Visibility="Collapsed"/>
                 <DataGridTextColumn Header="TÊN TÀI KHOẢN" Binding="{Binding AccountName}" Width="*"/>
                 <DataGridTextColumn Header="EMAIL" Binding="{Binding Email}" Width="2*"/>
-                <DataGridTextColumn Header="VAI TRÒ" Binding="{Binding Role}" Width="*"/>
-                <DataGridTextColumn Header="TRẠNG THÁI" Binding="{Binding Status}" Width="*"/>
+                <DataGridTextColumn Header="VAI TRÒ" Binding="{Binding Role}" Width="*" ElementStyle="{StaticResource CenterCell}"/>
+                <DataGridTextColumn Header="TRẠNG THÁI" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CenterCell}"/>
 
                 <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Cập nhật" Style="{StaticResource ButtonEditStyle}" 
-                                        Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                        CommandParameter="{Binding}"/>
+                            <UniformGrid Rows="1" HorizontalAlignment="Center" Width="100">
+                                <Button Content="Sửa" Style="{StaticResource ButtonEditStyle}"
+            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+            CommandParameter="{Binding}"
+            Height="28" Padding="0" Margin="0,0,3,0"/>
                                 <Button Content="Xóa" Style="{StaticResource ButtonDeleteStyle}" 
-                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                        CommandParameter="{Binding}"/>
-                            </StackPanel>
+            Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+            CommandParameter="{Binding}"
+            Height="28" Padding="0" Margin="3,0,0,0"/>
+                            </UniformGrid>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
