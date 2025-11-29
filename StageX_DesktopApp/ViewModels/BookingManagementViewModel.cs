@@ -16,7 +16,7 @@ namespace StageX_DesktopApp.ViewModels
     {
         public string SeatLabel { get; set; }
         public decimal Price { get; set; }
-        public long TicketCode { get; set; }
+        public string TicketCode { get; set; }
     }
 
     public class BookingDisplayItem
@@ -79,7 +79,7 @@ namespace StageX_DesktopApp.ViewModels
                         SeatLabel = $"{t.Seat?.RowChar}{t.Seat?.SeatNumber}",
                         // Công thức: Giá vé = Giá suất diễn + Giá hạng ghế (nếu có)
                         Price = (b.Performance?.Price ?? 0) + (t.Seat?.SeatCategory?.BasePrice ?? 0),
-                        TicketCode = t.TicketCode
+                        TicketCode = t.TicketCode.ToString()
                     }).ToList()
 
                 }).ToList();

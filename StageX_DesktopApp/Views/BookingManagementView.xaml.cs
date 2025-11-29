@@ -4,10 +4,15 @@ using StageX_DesktopApp.Services;
 using StageX_DesktopApp.ViewModels;
 using System;
 using System.Diagnostics;
+using System.Drawing; // Cần System.Drawing.Common
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Windows.Controls;
 using System.Windows;
+using System.Windows.Controls;
+using ZXing;
+using ZXing.Common;
+using ZXing.Windows.Compatibility;
 
 namespace StageX_DesktopApp.Views
 {
@@ -28,7 +33,40 @@ namespace StageX_DesktopApp.Views
                 if (e.NewValue is BookingManagementViewModel newVM) newVM.RequestPrintTicket += ExportTicketToPdf;
             };
         }
+        private XImage GenerateBarcodeXImage(string content)
+        {
+            try
+            {
+                var writer = new BarcodeWriter
+                {
+                    Format = BarcodeFormat.CODE_128,
+                    Options = new EncodingOptions
+                    {
+                        Height = 50,
+                        Width = 300,
+                        Margin = 0,
+                        PureBarcode = true
+                    }
+                };
 
+                using (var bitmap = writer.Write(content))
+                {
+                    // [SỬA LỖI TẠI ĐÂY]
+                    // KHÔNG dùng 'using' cho MemoryStream. 
+                    // Chúng ta cần stream này còn MỞ để PdfSharp có thể đọc được khi vẽ.
+                    var stream = new MemoryStream();
+
+                    bitmap.Save(stream, ImageFormat.Png);
+                    stream.Position = 0;
+
+                    return XImage.FromStream(stream);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
         private void ExportTicketToPdf(BookingDisplayItem b)
         {
             try
@@ -131,15 +169,53 @@ namespace StageX_DesktopApp.Views
                     gfx.DrawString($"{ticket.Price:N0} đ", fontTitle, textGold, pageWidth - leftX - 100, y + 0);
                     y += 40;
 
-                    // Barcode giả
-                    Random rnd = new Random();
-                    double barcodeX = (pageWidth - 100) / 2;
-                    for (int i = 0; i < 50; i++)
+                    // 1. Vẽ Barcode thật
+                    if (!string.IsNullOrEmpty(ticket.TicketCode))
                     {
-                        double w = rnd.Next(1, 4);
-                        gfx.DrawRectangle(XBrushes.White, barcodeX, y, w, 20);
-                        barcodeX += w + rnd.Next(1, 3);
+                        // Tạo ảnh barcode từ mã vé
+                        XImage barcodeImg = GenerateBarcodeXImage(ticket.TicketCode);
+
+                        if (barcodeImg != null)
+                        {
+                            double barcodeWidth = 150; // Chiều rộng barcode trên PDF
+                            double barcodeHeight = 25; // Chiều cao barcode
+                            double barcodeX = (pageWidth - barcodeWidth) / 2; // Căn giữa
+
+                            // Vẽ ảnh Barcode
+                            gfx.DrawImage(barcodeImg, barcodeX, y, barcodeWidth, barcodeHeight);
+                            y += barcodeHeight + 2; // Xuống dòng
+                        }
                     }
+
+                    // 2. Vẽ mã số dưới Barcode (để người dùng đọc được nếu không quét được)
+                    gfx.DrawString(ticket.TicketCode, fontNormal, XBrushes.Black, // In màu đen đè lên nền trắng (nếu có nền) hoặc màu trắng lên nền đen
+                                   new XRect(0, y, pageWidth, 10), XStringFormats.TopCenter);
+
+                    // *Lưu ý nhỏ:* Vì nền vé của bạn là màu tối (bgBrush = 26,26,26), 
+                    // Barcode màu đen sẽ không nhìn thấy. Bạn cần vẽ một ô trắng nền cho Barcode.
+
+                    // [CODE SỬA LẠI HOÀN CHỈNH CHO PHẦN BARCODE TRÊN NỀN TỐI]
+
+                    // Tính toán vị trí
+                    double bcW = 160;
+                    double bcH = 35;
+                    double bcX = (pageWidth - bcW) / 2;
+
+                    // Vẽ nền trắng cho khu vực Barcode (bắt buộc để máy quét đọc được)
+                    gfx.DrawRectangle(XBrushes.White, bcX - 5, y, bcW + 10, bcH + 15);
+
+                    // Tạo và vẽ Barcode
+                    XImage realBarcode = GenerateBarcodeXImage(ticket.TicketCode);
+                    if (realBarcode != null)
+                    {
+                        gfx.DrawImage(realBarcode, bcX, y + 5, bcW, 25);
+                    }
+
+                    // Vẽ mã số (màu đen) bên dưới vạch
+                    gfx.DrawString(ticket.TicketCode, fontSmall, XBrushes.Black,
+                                   new XRect(0, y + 32, pageWidth, 10), XStringFormats.TopCenter);
+
+                    y += 55; // Cách ra để viết lời cảm ơn
                     gfx.DrawString("Cảm ơn quý khách!", fontSmall, textGray, new XRect(0, y, pageWidth, 10), XStringFormats.TopCenter);
                 }
 

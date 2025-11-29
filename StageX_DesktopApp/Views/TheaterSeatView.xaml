@@ -90,6 +90,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
         <Style x:Key="CenterCell" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -226,20 +227,27 @@
                         <Image Source="/Assets/logo.png" Width="100" Margin="20,0,0,0" VerticalAlignment="Top" Opacity="0.5" HorizontalAlignment="Right"/>
                     </Grid>
                 </Border>
-                
-                <DataGrid Grid.Row="2" ItemsSource="{Binding Theaters}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" RowHeaderWidth="0">
+
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Theaters}"
+                          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+Background="Transparent" RowBackground="Transparent" 
+Foreground="White" BorderThickness="0"
+GridLinesVisibility="All" HorizontalGridLinesBrush="#333" VerticalGridLinesBrush="#333"
+RowHeaderWidth="0" HeadersVisibility="Column"
+RowHeight="31">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding TheaterId}" Width="50" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="TÊN RẠP" Binding="{Binding Name}" Width="*"/>
                         <DataGridTextColumn Header="SỨC CHỨA" Binding="{Binding TotalSeats}" Width="Auto" ElementStyle="{StaticResource CenterCell}"/>
-
-                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="Auto">
+                        <DataGridTemplateColumn Header="HÀNH ĐỘNG" Width="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Button Content="Xem" Margin="0,0,5,0" 
-                                                Command="{Binding DataContext.SelectTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}">
+                                    <Grid>
+                                        <Button Content="Xem" 
+                        Command="{Binding DataContext.SelectTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                        CommandParameter="{Binding}"
+                        Height="28" Padding="0" Width="80"
+                        HorizontalAlignment="Center">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ButtonViewStyle}">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -252,11 +260,9 @@
                                             </Button.Style>
                                         </Button>
 
-                                        <Button Content="Sửa" Margin="0,0,5,0" 
-                                                Command="{Binding DataContext.SelectTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource ButtonEditStyle}">
+                                        <UniformGrid Rows="1" HorizontalAlignment="Center" Width="140">
+                                            <UniformGrid.Style>
+                                                <Style TargetType="UniformGrid">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding CanDelete}" Value="True">
@@ -264,24 +270,19 @@
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
-                                            </Button.Style>
-                                        </Button>
+                                            </UniformGrid.Style>
 
-                                        <Button Content="Xóa"
-                                                Command="{Binding DataContext.DeleteTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}">
-                                            <Button.Style>
-                                                <Style TargetType="Button" BasedOn="{StaticResource ButtonDeleteStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding CanDelete}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                        </Button>
-                                    </StackPanel>
+                                            <Button Content="Sửa" Style="{StaticResource ButtonEditStyle}"
+                            Command="{Binding DataContext.SelectTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                            CommandParameter="{Binding}"
+                            Height="28" Padding="0" Margin="0,0,3,0"/>
+
+                                            <Button Content="Xóa" Style="{StaticResource ButtonDeleteStyle}"
+                            Command="{Binding DataContext.DeleteTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                            CommandParameter="{Binding}"
+                            Height="28" Padding="0" Margin="3,0,0,0"/>
+                                        </UniformGrid>
+                                    </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

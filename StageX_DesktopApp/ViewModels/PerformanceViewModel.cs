@@ -40,7 +40,9 @@ namespace StageX_DesktopApp.ViewModels
         [ObservableProperty] private Theater _selectedTheater;
         [ObservableProperty] private DateTime _perfDate = DateTime.Now;
         [ObservableProperty] private string _priceStr;     // Binding text
-        [ObservableProperty] private int _statusIndex = 0; // 0: Mở bán, 1: Hủy
+        [ObservableProperty] private ObservableCollection<string> _statusOptions;
+        [ObservableProperty] private string _selectedStatus;
+        [ObservableProperty] private bool _isStatusEnabled;
         [ObservableProperty] private string _saveBtnContent = "Thêm suất diễn";
 
         public PerformanceViewModel()
@@ -74,6 +76,7 @@ namespace StageX_DesktopApp.ViewModels
             SelectedFilterTheater = FilterTheaters[0];
 
             await LoadPerformances();
+            ClearForm();
         }
         private void UpdateEndTime()
         {
@@ -136,7 +139,13 @@ namespace StageX_DesktopApp.ViewModels
             if (!MinutesList.Contains(SelectedMinute)) SelectedMinute = 0; PriceStr = p.Price.ToString("F0");
             UpdateEndTime();
 
-            StatusIndex = (p.Status == "Đã hủy") ? 1 : 0;
+            StatusOptions = new ObservableCollection<string> { "Đang mở bán", "Đã hủy" };
+            if (!StatusOptions.Contains(p.Status))
+            {
+                StatusOptions.Add(p.Status);
+            }
+            SelectedStatus = p.Status;
+            IsStatusEnabled = true; // Cho phép chọn lại
             SaveBtnContent = "Lưu thay đổi";
             if (p.HasBookings)
             {
@@ -160,7 +169,9 @@ namespace StageX_DesktopApp.ViewModels
             PerfDate = DateTime.Now;
             SelectedHour = 19; SelectedMinute = 0;
             PriceStr = "";
-            StatusIndex = 0;
+            StatusOptions = new ObservableCollection<string> { "Đang mở bán" };
+            SelectedStatus = "Đang mở bán";
+            IsStatusEnabled = false; // Khóa không cho bấm
             SaveBtnContent = "Thêm suất diễn";
             IsDetailEditable = true;
         }
@@ -168,18 +179,23 @@ namespace StageX_DesktopApp.ViewModels
         [RelayCommand]
         private async Task Save()
         {
+            // 1. Parse giá tiền
             decimal.TryParse(PriceStr, out decimal price);
 
+            // 2. Validate dữ liệu
             if (SelectedShow == null || SelectedTheater == null || price <= 0)
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!");
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin (Vở diễn, Rạp, Giá vé)!");
                 return;
             }
-            DateTime startDateTime = PerfDate.Date.Add(new TimeSpan(SelectedHour, SelectedMinute, 0));
 
+            // 3. Tính toán thời gian
+            DateTime startDateTime = PerfDate.Date.Add(new TimeSpan(SelectedHour, SelectedMinute, 0));
             DateTime endDateTime = startDateTime.AddMinutes(SelectedShow.DurationMinutes);
 
-            if (StatusIndex == 0)
+            // 4. [SỬA QUAN TRỌNG TẠI ĐÂY] 
+            // Kiểm tra dựa trên chuỗi SelectedStatus thay vì StatusIndex
+            if (SelectedStatus == "Đang mở bán")
             {
                 if (endDateTime <= DateTime.Now)
                 {
@@ -190,6 +206,7 @@ namespace StageX_DesktopApp.ViewModels
                     return;
                 }
             }
+
             TimeSpan start = new TimeSpan(SelectedHour, SelectedMinute, 0);
 
             var perf = new Performance
@@ -200,19 +217,20 @@ namespace StageX_DesktopApp.ViewModels
                 PerformanceDate = PerfDate,
                 StartTime = start,
                 Price = price,
-                Status = StatusIndex == 1 ? "Đã hủy" : "Đang mở bán"
+
+                // [ĐÚNG] Gán trạng thái từ ComboBox
+                Status = SelectedStatus
             };
 
             try
             {
                 await _dbService.SavePerformanceAsync(perf);
-                MessageBox.Show("Lưu thành công!");
+                MessageBox.Show(PerfId > 0 ? "Cập nhật thành công!" : "Thêm mới thành công!");
                 ClearForm();
                 await LoadPerformances();
             }
             catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
         }
-
         [RelayCommand]
         private async Task Delete(Performance p)
         {

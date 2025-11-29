@@ -199,10 +199,28 @@
 
                     <StackPanel Grid.Column="4">
                         <TextBlock Text="Trạng thái:" Margin="0,0,0,3" Foreground="Gray" FontSize="12"/>
-                        <ComboBox SelectedIndex="{Binding StatusIndex}">
-                            <ComboBoxItem Content="Đang mở bán"/>
-                            <ComboBoxItem Content="Đã hủy"/>
-                            <ComboBoxItem Content="Đã kết thúc"/>
+
+                        <ComboBox ItemsSource="{Binding StatusOptions}" 
+              SelectedItem="{Binding SelectedStatus}"
+              IsEnabled="{Binding IsStatusEnabled}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding}" Value="Đang mở bán">
+                                                        <Setter Property="Foreground" Value="#FF198754"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding}" Value="Đã hủy">
+                                                        <Setter Property="Foreground" Value="#FFDC3545"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
 

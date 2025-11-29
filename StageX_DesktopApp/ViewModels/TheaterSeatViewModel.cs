@@ -37,7 +37,7 @@ namespace StageX_DesktopApp.ViewModels
 
         [ObservableProperty] private string _categoryName = "";
         [ObservableProperty] private string _categoryPrice = "";
-        [ObservableProperty] private int _editingCategoryId =0;
+        [ObservableProperty] private int _editingCategoryId = 0;
         [ObservableProperty] private string _categoryBtnContent = "Thêm";
 
         public event Action<List<Seat>> RequestDrawSeats;
@@ -70,7 +70,7 @@ namespace StageX_DesktopApp.ViewModels
         {
             int.TryParse(NewRows, out int r);
             int.TryParse(NewCols, out int c);
-            
+
             if (string.IsNullOrWhiteSpace(NewTheaterName)) { MessageBox.Show("Nhập tên rạp!"); return; }
 
             IsEditing = true; IsCreatingNew = true; IsReadOnlyMode = false; SaveBtnContent = "Lưu rạp mới";
@@ -91,8 +91,9 @@ namespace StageX_DesktopApp.ViewModels
         }
 
         [RelayCommand]
-        private async Task SelectTheater(Theater t)
+        private async Task SelectTheater(object obj)
         {
+            var t = obj as Theater;
             if (t == null) return;
             SelectedTheater = t;
             EditTheaterName = t.Name;
@@ -177,8 +178,10 @@ namespace StageX_DesktopApp.ViewModels
             catch (Exception ex) { MessageBox.Show("Lỗi cập nhật: " + ex.Message); }
         }
         [RelayCommand]
-        private async Task DeleteTheater(Theater t)
+        private async Task DeleteTheater(object obj)
         {
+            var t = obj as Theater;
+            if (t == null) return;
             if (MessageBox.Show($"Xóa rạp '{t.Name}'?", "Xác nhận", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 try { await _dbService.DeleteTheaterAsync(t.TheaterId); await LoadData(); }

@@ -121,6 +121,7 @@ RowHeight="31">
                     <Setter Property="Padding" Value="10,8"/>
                     <Setter Property="FontSize" Value="14"/>
                     <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
                 </Style>
             </DataGrid.Resources>
 
