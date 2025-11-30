@@ -1,4 +1,5 @@
-﻿using LiveCharts.Wpf;
+﻿using LiveCharts;
+using LiveCharts.Wpf;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
@@ -6,6 +7,7 @@ using StageX_DesktopApp.Services;
 using StageX_DesktopApp.ViewModels;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,6 +23,15 @@ namespace StageX_DesktopApp.Views
         {
             InitializeComponent();
 
+            this.Loaded += DashboardView_Loaded;
+        }
+        private async void DashboardView_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Lấy ViewModel từ DataContext ra để gọi hàm LoadData
+            if (this.DataContext is DashboardViewModel vm)
+            {
+                await vm.LoadData();
+            }
         }
         private async void FilterButton_Click(object sender, RoutedEventArgs e)
         {
@@ -37,6 +48,87 @@ namespace StageX_DesktopApp.Views
                 await vm.LoadOccupancy(filter);
             }
         }
+
+        private async void OccupancyChart_DataClick(object sender, ChartPoint chartPoint)
+        {
+            // Lấy ViewModel từ DataContext
+            if (this.DataContext is DashboardViewModel vm)
+            {
+                // 1. Kiểm tra và lấy nhãn của cột vừa click
+                if (vm.OccupancyLabels == null || (int)chartPoint.X >= vm.OccupancyLabels.Count) return;
+                string label = vm.OccupancyLabels[(int)chartPoint.X];
+
+                DateTime start = DateTime.MinValue;
+                DateTime end = DateTime.MaxValue;
+                bool isValidDate = false;
+
+                // Giả lập năm dữ liệu là 2025 (khớp với DB bạn nạp)
+                int year = 2025;
+
+                // 2. Xử lý logic thời gian dựa trên Filter đang chọn
+                if (vm.CurrentOccupancyFilter == "week")
+                {
+                    // Click vào ngày (VD: "26/11") -> Lọc data trọn vẹn ngày đó
+                    if (DateTime.TryParseExact($"{label}/{year}", "dd/MM/yyyy", null, DateTimeStyles.None, out DateTime date))
+                    {
+                        start = date.Date; // 00:00:00
+                        end = date.Date.AddDays(1).AddTicks(-1); // 23:59:59
+                        isValidDate = true;
+                    }
+                }
+                else if (vm.CurrentOccupancyFilter == "month")
+                {
+                    // Click vào tuần (VD: "Tuần 48") -> Lọc data trong 7 ngày của tuần đó
+                    string weekNumStr = label.Replace("Tuần ", "");
+                    if (int.TryParse(weekNumStr, out int weekNum))
+                    {
+                        start = FirstDateOfWeekISO8601(year, weekNum);
+                        end = start.AddDays(7).AddTicks(-1);
+                        isValidDate = true;
+                    }
+                }
+                else if (vm.CurrentOccupancyFilter == "year")
+                {
+                    // Click vào năm (VD: "2025") -> Lọc data cả năm
+                    if (int.TryParse(label, out int y))
+                    {
+                        start = new DateTime(y, 1, 1);
+                        end = new DateTime(y, 12, 31, 23, 59, 59);
+                        isValidDate = true;
+                    }
+                }
+
+                // 3. Gọi ViewModel để cập nhật dữ liệu nếu ngày hợp lệ
+                if (isValidDate)
+                {
+                    // (Tùy chọn) Hiện thông báo nhỏ để biết đang xem ngày nào
+                    // MessageBox.Show($"Đang lọc dữ liệu: {label}");
+
+                    await vm.LoadPieChart(start, end);
+                    await vm.LoadTopShows(start, end);
+                }
+            }
+        }
+
+        public static DateTime FirstDateOfWeekISO8601(int year, int weekOfYear)
+        {
+            DateTime jan1 = new DateTime(year, 1, 1);
+            int daysOffset = DayOfWeek.Thursday - jan1.DayOfWeek;
+
+            DateTime firstThursday = jan1.AddDays(daysOffset);
+            var cal = CultureInfo.CurrentCulture.Calendar;
+            int firstWeek = cal.GetWeekOfYear(firstThursday, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+
+            var weekNum = weekOfYear;
+            if (firstWeek <= 1)
+            {
+                weekNum -= 1;
+            }
+
+            var result = firstThursday.AddDays(weekNum * 7);
+            return result.AddDays(-3); // Trả về Thứ 2 đầu tuần
+        }
+
         // ==============================================================================
         //  SỰ KIỆN CLICK NÚT XUẤT PDF
         // ==============================================================================
@@ -44,107 +136,51 @@ namespace StageX_DesktopApp.Views
         {
             try
             {
-                string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    $"BaoCao_StageX_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
-
+                string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"BaoCao_StageX_{DateTime.Now:HHmmss}.pdf");
                 var doc = new PdfDocument();
                 doc.Info.Title = "Báo cáo Dashboard StageX";
-
                 PdfPage page = doc.AddPage();
-                page.Width = XUnit.FromMillimeter(297); // Khổ A4 Ngang
+                page.Width = XUnit.FromMillimeter(297); // A4 Ngang
                 page.Height = XUnit.FromMillimeter(210);
-                page.Orientation = PdfSharp.PageOrientation.Landscape;
-
                 XGraphics gfx = XGraphics.FromPdfPage(page);
 
-                // 1. VẼ NỀN ĐEN (Cho giống giao diện App)
-                gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(26, 26, 26)), 0, 0, page.Width, page.Height);
+                // Nền đen
+                gfx.DrawRectangle(XBrushes.Black, 0, 0, page.Width, page.Height);
 
-                // 2. CẤU HÌNH FONT (Hỗ trợ Tiếng Việt)
-                // Đăng ký bảng mã Windows-1252 cho .NET Core/9
-                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+                // Font
+                XFont fTitle = new XFont("Arial", 24);
+                XFont fHeader = new XFont("Arial", 16);
 
-                XPdfFontOptions options = new XPdfFontOptions(PdfFontEncoding.Unicode);
-                XFont fTitle = new XFont("Arial", 24, XFontStyle.Bold, options);
-                XFont fHeader = new XFont("Arial", 16, XFontStyle.Bold, options);
-                XFont fNormal = new XFont("Arial", 12, XFontStyle.Regular, options);
-                XFont fKPI = new XFont("Arial", 20, XFontStyle.Bold, options);
+                // 1. Vẽ Tiêu đề & KPI (Giữ nguyên hoặc vẽ đơn giản)
+                gfx.DrawString("BÁO CÁO TỔNG QUAN", fTitle, XBrushes.Yellow, new XRect(0, 20, page.Width, 30), XStringFormats.TopCenter);
 
-                // 3. VẼ TIÊU ĐỀ & NGÀY
-                double y = 30;
-                gfx.DrawString("BÁO CÁO TỔNG QUAN STAGEX", fTitle, XBrushes.White, new XRect(0, y, page.Width, 40), XStringFormats.TopCenter);
-                y += 40;
-                gfx.DrawString($"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}", fNormal, XBrushes.LightGray, new XRect(0, y, page.Width, 20), XStringFormats.TopCenter);
-                y += 50;
+                // 2. CHỤP ẢNH BIỂU ĐỒ - TĂNG KÍCH THƯỚC VÀ TỈ LỆ
+                // Mẹo: Tăng chiều rộng/cao lúc chụp để ảnh nét hơn, và đủ chỗ cho Legend
 
-                // 4. VẼ KPI (THÔNG TIN TỔNG QUAN)
-                // Vẽ thủ công từng ô để đẹp hơn và chắc chắn hiện dữ liệu
-                double kpiY = y;
-                double kpiWidth = (page.Width - 80) / 4;
+                // Chart 1: Revenue
+                gfx.DrawString("DOANH THU", fHeader, XBrushes.Cyan, 40, 80);
+                var imgRevenue = CaptureChartToXImage(RevenueChart, 800, 400); // Tăng height lên 400
+                if (imgRevenue != null) gfx.DrawImage(imgRevenue, 40, 110, 350, 180); // Vẽ vào PDF với kích thước nhỏ hơn
 
-                DrawKPIBox(gfx, "TỔNG DOANH THU", RevenueTotalText.Text, 40, kpiY, kpiWidth, fNormal, fKPI);
-                DrawKPIBox(gfx, "ĐƠN HÀNG", OrderTotalText.Text, 40 + kpiWidth, kpiY, kpiWidth, fNormal, fKPI);
-                DrawKPIBox(gfx, "VỞ DIỄN", ShowTotalText.Text, 40 + kpiWidth * 2, kpiY, kpiWidth, fNormal, fKPI);
-                DrawKPIBox(gfx, "THỂ LOẠI", GenreTotalText.Text, 40 + kpiWidth * 3, kpiY, kpiWidth, fNormal, fKPI);
+                // Chart 2: Occupancy (SỬA LỖI BỊ CẮT: Tăng chiều cao capture)
+                gfx.DrawString("TÌNH TRẠNG VÉ", fHeader, XBrushes.Cyan, 420, 80);
+                var imgOccupancy = CaptureChartToXImage(OccupancyChart, 800, 500); // Height 500 để chứa hết Legend và Trục X
+                if (imgOccupancy != null) gfx.DrawImage(imgOccupancy, 420, 110, 350, 180);
 
-                y += 80; // Xuống dòng sau phần KPI
+                // Chart 3: Pie Chart
+                gfx.DrawString("TỶ LỆ VÉ", fHeader, XBrushes.Cyan, 40, 310);
+                var imgPie = CaptureChartToXImage(ShowPieChart, 600, 400); // Pie cần rộng để hiện label 2 bên
+                if (imgPie != null) gfx.DrawImage(imgPie, 40, 340, 300, 200);
 
-                // 5. CHỤP ẢNH BIỂU ĐỒ (CHẤT LƯỢNG CAO)
-                // Scale = 2.0 (Nhân đôi độ phân giải để ảnh nét khi in)
-                double scale = 3.0;
+                // Chart 4: Table Top 5
+                gfx.DrawString("TOP 5 VỞ DIỄN", fHeader, XBrushes.Cyan, 420, 310);
+                var imgTable = CaptureChartToXImage(TopShowsGrid, 800, 400);
+                if (imgTable != null) gfx.DrawImage(imgTable, 420, 340, 350, 200);
 
-                // Kích thước hiển thị trên PDF
-                double margin = 40;
-                double chartWidthPDF = (page.Width - (margin * 3)) / 2;
-                double chartHeightPDF = 180;
-                double col1_X = margin;
-                double col2_X = page.Width / 2 + 10;
-                double currentY = y;
-
-                // Chờ UI ổn định
-                await Task.Delay(200);
-
-                // --- Biểu đồ Doanh thu ---
-                gfx.DrawString("DOANH THU THEO THÁNG", fHeader, XBrushes.Cyan, col1_X, currentY);
-                var imgRevenue = CaptureChartHighQuality(RevenueChart, scale);
-                if (imgRevenue != null)
-                    gfx.DrawImage(imgRevenue, col1_X, currentY + 25, chartWidthPDF, chartHeightPDF);
-
-                // --- Biểu đồ Occupancy ---
-                gfx.DrawString("TÌNH TRẠNG VÉ (BÁN/TRỐNG)", fHeader, XBrushes.Cyan, col2_X, currentY);
-                var imgOccupancy = CaptureChartHighQuality(OccupancyChart, scale);
-                if (imgOccupancy != null)
-                    gfx.DrawImage(imgOccupancy, col2_X, currentY + 25, chartWidthPDF, chartHeightPDF);
-
-                currentY += chartHeightPDF + 50;
-
-                // --- Biểu đồ Tròn ---
-                gfx.DrawString("TỶ LỆ VÉ THEO VỞ DIỄN", fHeader, XBrushes.Cyan, col1_X, currentY);
-                var imgPie = CaptureChartHighQuality(ShowPieChart, scale);
-                if (imgPie != null)
-                    // Pie cần vẽ vuông, căn giữa cột trái
-                    gfx.DrawImage(imgPie, col1_X + (chartWidthPDF - chartHeightPDF) / 2, currentY + 25, chartHeightPDF, chartHeightPDF);
-
-                // --- Bảng Top 5 ---
-                gfx.DrawString("TOP 5 VỞ DIỄN BÁN CHẠY", fHeader, XBrushes.Cyan, col2_X, currentY);
-                var imgTop5 = CaptureChartHighQuality(TopShowsGrid, scale);
-                if (imgTop5 != null)
-                    gfx.DrawImage(imgTop5, col2_X, currentY + 25, chartWidthPDF, 200); // Chiều cao bảng khoảng 200 là vừa
-
-                // 6. LƯU VÀ MỞ FILE
                 doc.Save(filePath);
-                doc.Close();
-
-                SoundManager.PlaySuccess();
-                MessageBox.Show($"Xuất PDF thành công!\nĐã lưu tại: {filePath}", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                try { Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true }); } catch { }
+                Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
             }
-            catch (Exception ex)
-            {
-                SoundManager.PlayError();
-                MessageBox.Show("Lỗi xuất PDF: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Lỗi PDF: " + ex.Message); }
         }
 
         // Hàm vẽ ô KPI thủ công (để đảm bảo nét và đúng vị trí)
@@ -163,50 +199,54 @@ namespace StageX_DesktopApp.Views
         // ==============================================================================
         //  HÀM CHỤP ẢNH CHẤT LƯỢNG CAO (FIX MỜ)
         // ==============================================================================
-        private XImage CaptureChartHighQuality(UIElement element, double scale)
+        private XImage CaptureChartToXImage(UIElement element, int width, int height)
         {
             try
             {
-                // 1. Lấy kích thước thực tế
-                double actualWidth = element.RenderSize.Width;
-                double actualHeight = element.RenderSize.Height;
+                // 1. Lưu trạng thái cũ
+                var originalBackground = (element as Control)?.Background;
 
-                if (actualWidth == 0 || actualHeight == 0) return null;
-
-                // 2. Tính toán kích thước ảnh đầu ra (Nhân với scale, ví dụ x3)
-                int renderWidth = (int)(actualWidth * scale);
-                int renderHeight = (int)(actualHeight * scale);
-
-                // 3. Tạo RenderTargetBitmap với DPI cao
-                // 96 * scale sẽ tạo ra ảnh có mật độ điểm ảnh cao
-                RenderTargetBitmap renderTarget = new RenderTargetBitmap(
-                    renderWidth, renderHeight,
-                    96 * scale, 96 * scale,
-                    PixelFormats.Pbgra32);
-
-                // 4. Vẽ control vào bitmap
-                DrawingVisual drawingVisual = new DrawingVisual();
-                using (DrawingContext drawingContext = drawingVisual.RenderOpen())
+                // 2. Ép nền màu tối cho ảnh (để khớp với PDF nền đen)
+                if (element is Control ctrl) ctrl.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                if (element is LiveCharts.Wpf.Charts.Base.Chart chart)
                 {
-                    // Vẽ nền tối đệm để tránh nền trong suốt
-                    drawingContext.DrawRectangle(new SolidColorBrush(Color.FromRgb(30, 30, 30)), null, new Rect(0, 0, actualWidth, actualHeight));
-
-                    // Vẽ nội dung control
-                    VisualBrush visualBrush = new VisualBrush(element);
-                    drawingContext.DrawRectangle(visualBrush, null, new Rect(0, 0, actualWidth, actualHeight));
+                    chart.DisableAnimations = true;
+                    chart.Hoverable = false;
+                    chart.DataTooltip = null; // Tắt tooltip để không bị dính vào ảnh
                 }
 
-                renderTarget.Render(drawingVisual);
+                // 3. Ép Render lại với kích thước mới
+                var size = new Size(width, height);
+                element.Measure(size);
+                element.Arrange(new Rect(size));
+                element.UpdateLayout(); // Bắt buộc
 
-                // 5. Chuyển sang XImage
-                return BitmapToXImage(renderTarget);
+                // 4. Chụp
+                var bmp = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                bmp.Render(element);
+
+                // 5. Trả lại trạng thái cũ
+                if (element is Control ctrl2) ctrl2.Background = originalBackground;
+                if (element is LiveCharts.Wpf.Charts.Base.Chart chart2)
+                {
+                    chart2.DisableAnimations = false;
+                    chart2.Hoverable = true;
+                }
+
+                // 6. Convert sang XImage
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(bmp));
+                using (var ms = new MemoryStream())
+                {
+                    encoder.Save(ms);
+                    ms.Position = 0;
+                    // Copy ra stream mới để PDFSharp dùng (tránh lỗi stream closed)
+                    var resultMs = new MemoryStream(ms.ToArray());
+                    return XImage.FromStream(resultMs);
+                }
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
-
         private MemoryStream BitmapToStream(BitmapSource bmp)
         {
             var stream = new MemoryStream();
