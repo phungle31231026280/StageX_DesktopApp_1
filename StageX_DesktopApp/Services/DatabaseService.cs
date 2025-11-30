@@ -406,6 +406,14 @@ namespace StageX_DesktopApp.Services
                 return await context.SeatCategories.OrderBy(c => c.CategoryId).AsNoTracking().ToListAsync();
             }
         }
+        public async Task<bool> IsSeatCategoryInUseAsync(int categoryId)
+        {
+            using (var context = new AppDbContext())
+            {
+                // Kiểm tra trong bảng Seats xem có dòng nào dùng CategoryId này không
+                return await context.Seats.AnyAsync(s => s.CategoryId == categoryId);
+            }
+        }
         // Lưu Rạp Mới kèm danh sách Ghế (Transaction)
         public async Task SaveNewTheaterAsync(Theater theater, List<Seat> seats)
         {
@@ -515,7 +523,40 @@ namespace StageX_DesktopApp.Services
                 await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_theater({theaterId})");
             }
         }
+        // [THÊM MỚI] Hàm cập nhật toàn bộ cấu trúc rạp (Dùng cho nút Cập nhật)
+        public async Task UpdateTheaterStructureAsync(Theater theater, List<Seat> newSeats)
+        {
+            using (var context = new AppDbContext())
+            {
+                // 1. Cập nhật thông tin cơ bản của Rạp
+                var dbTheater = await context.Theaters.FindAsync(theater.TheaterId);
+                if (dbTheater != null)
+                {
+                    dbTheater.Name = theater.Name;
+                    dbTheater.TotalSeats = newSeats.Count; // Cập nhật lại tổng số ghế mới
+                                                           // dbTheater.Status giữ nguyên
+                }
 
+                // 2. Xóa toàn bộ ghế cũ của rạp này (Gọi Procedure có sẵn)
+                await context.Database.ExecuteSqlInterpolatedAsync($"CALL proc_delete_seats_by_theater({theater.TheaterId})");
+
+                // 3. Thêm lại danh sách ghế mới từ giao diện
+                foreach (var s in newSeats)
+                {
+                    // Reset ID để EF hiểu là thêm mới
+                    s.SeatId = 0;
+                    s.TheaterId = theater.TheaterId;
+
+                    // Quan trọng: Gán lại CategoryId nếu object Category có dữ liệu
+                    if (s.SeatCategory != null) s.CategoryId = s.SeatCategory.CategoryId;
+                    s.SeatCategory = null; // Ngắt tham chiếu object để tránh lỗi EF add nhầm Category
+
+                    context.Seats.Add(s);
+                }
+
+                await context.SaveChangesAsync();
+            }
+        }
         // ... (Code cũ) ...
 
         // --- [DASHBOARD] BẢNG ĐIỀU KHIỂN ---

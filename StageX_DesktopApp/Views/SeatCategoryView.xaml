@@ -42,7 +42,7 @@
 
                 <Button Grid.Column="2" Content="{Binding SaveBtnContent}" 
                             Command="{Binding SaveCommand}"
-                            Style="{StaticResource ButtonAddStyle}" VerticalAlignment="Top" MinWidth="90" Height="34" Margin="0,22,0,0"/>
+                            Style="{StaticResource ButtonAddStyle}" VerticalAlignment="Top" MinWidth="90" Height="31" Margin="0,22,0,0"/>
 
                 <Button Grid.Column="3" Content="Hủy" 
                             Command="{Binding CancelCommand}"
@@ -71,11 +71,10 @@ RowHeight="31">
             </DataGrid.Resources>
 
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding CategoryId}" Width="50"/>
-                <DataGridTextColumn Header="Tên Hạng Ghế" Binding="{Binding CategoryName}" Width="*"/>
-                <DataGridTextColumn Header="Giá Phụ Thu (VNĐ)" Binding="{Binding BasePrice, StringFormat='N0'}" Width="150" ElementStyle="{StaticResource CenterCell}"/>
+                <DataGridTextColumn Header="Tên Hạng" Binding="{Binding CategoryName}" Width="2*"/>
+                <DataGridTextColumn Header="Giá Phụ Thu (VNĐ)" Binding="{Binding BasePrice, StringFormat='N0'}" Width="2*" ElementStyle="{StaticResource CenterCell}"/>
 
-                <DataGridTemplateColumn Header="Màu" Width="60">
+                <DataGridTemplateColumn Header="Màu" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Border Background="{Binding DisplayColor}" Width="20" Height="20" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"/>
