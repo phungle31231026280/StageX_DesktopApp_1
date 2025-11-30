@@ -109,7 +109,7 @@
 
                             <TextBlock Grid.Column="4" Text="➔" VerticalAlignment="Center" Foreground="Gray"/>
 
-                            <TextBox Grid.Column="6" Text="{Binding EndTimeStr, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource InputStyle}" ToolTip="Giờ kết thúc (Tự động tính theo thời lượng)"/>
+                            <TextBox Grid.Column="6" Text="{Binding EndTimeStr, Mode=OneWay}" IsReadOnly="True" IsEnabled="{Binding IsDetailEditable}" Style="{StaticResource InputStyle}" ToolTip="Giờ kết thúc (Tự động tính theo thời lượng)"/>
                         </Grid>
                     </StackPanel>
 
