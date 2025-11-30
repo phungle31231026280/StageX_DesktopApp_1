@@ -36,46 +36,74 @@
                 </StackPanel>
 
                 <Grid Margin="0,10,0,0">
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsPeakMode, Converter={StaticResource InvertBoolConverter}}">
+
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPeakMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Vở diễn:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock Text="Vở diễn:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Gray"/>
                             <ComboBox Width="220" ItemsSource="{Binding Shows}" SelectedItem="{Binding SelectedShow}" DisplayMemberPath="title" Style="{StaticResource InputStyle}"/>
                         </StackPanel>
+
                         <StackPanel Orientation="Horizontal" Margin="15,0,0,0">
-                            <TextBlock Text="Suất chiếu:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                            <TextBlock Text="Suất chiếu:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Gray"/>
                             <ComboBox Width="250" ItemsSource="{Binding Performances}" SelectedItem="{Binding SelectedPerformance}" DisplayMemberPath="Display" Style="{StaticResource InputStyle}"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <ItemsControl ItemsSource="{Binding TopPerformances}" Visibility="{Binding IsPeakMode, Converter={StaticResource BoolToVis}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="3" Rows="1"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding Display}" Margin="5,0" Height="40"
-                                        Background="#FF2196F3" Foreground="White" BorderBrush="#FFFFC107" BorderThickness="1"
-                                        Command="{Binding DataContext.SelectPeakPerformanceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                        CommandParameter="{Binding}">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding performance_id}" Value="0">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsSoldOut}" Value="True">
-                                                    <Setter Property="Background" Value="Gray"/>
-                                                    <Setter Property="IsEnabled" Value="False"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <Border Background="Transparent">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPeakMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <ItemsControl ItemsSource="{Binding TopPerformances}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="3" Rows="1"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Display}" Margin="5,0" Height="45"
+                            Background="#FF2196F3" Foreground="White" 
+                            BorderBrush="#FFFFC107" BorderThickness="1"
+                            Command="{Binding DataContext.SelectPeakPerformanceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ButtonBaseStyle}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding performance_id}" Value="0">
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSoldOut}" Value="True">
+                                                        <Setter Property="Background" Value="Gray"/>
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                        <Setter Property="ToolTip" Value="Đã hết vé"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
                 </Grid>
             </StackPanel>
         </Border>
@@ -123,8 +151,8 @@
                           Height="120" Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"
                           GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333" RowHeaderWidth="0">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="GHẾ" Binding="{Binding SeatLabel}" Width="*" />
-                        <DataGridTextColumn Header="ĐƠN GIÁ" Binding="{Binding Price, StringFormat='N0'}" Width="*" />
+                        <DataGridTextColumn Header="GHẾ" Binding="{Binding SeatLabel}" Width="*" ElementStyle="{StaticResource CenterCell}"/>
+                        <DataGridTextColumn Header="ĐƠN GIÁ" Binding="{Binding Price, StringFormat='N0'}" Width="*" ElementStyle="{StaticResource CenterCell}"/>
                     </DataGrid.Columns>
                 </DataGrid>
                 <TextBlock Text="{Binding TotalText}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,5,0,5" />
