@@ -42,11 +42,7 @@
                     <Button x:Name="BtnExportPdf" Content="Xuất PDF" Background="#FFDC3545" Foreground="White" Padding="10,5" 
                             BorderThickness="0" FontWeight="Bold" Cursor="Hand"
                             Click="BtnExportPdf_Click">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="4"/>
-                            </Style>
-                        </Button.Resources>
+
                     </Button>
                 </StackPanel>
             </Grid>
@@ -97,16 +93,17 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Doanh thu theo tháng" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" Margin="0,0,0,10"/>
-                        <lvc:CartesianChart x:Name="RevenueChart" Grid.Row="1" Background="Transparent" LegendLocation="None" Series="{Binding RevenueSeries}">
+
+                        <lvc:CartesianChart x:Name="RevenueChart" Grid.Row="1" Series="{Binding RevenueSeries}" LegendLocation="None">
                             <lvc:CartesianChart.AxisX>
-                                <lvc:Axis LabelsRotation="15" Labels="{Binding RevenueLabels}">
+                                <lvc:Axis Labels="{Binding RevenueLabels}">
                                     <lvc:Axis.Separator>
                                         <lvc:Separator Step="1" StrokeThickness="0"/>
                                     </lvc:Axis.Separator>
                                 </lvc:Axis>
                             </lvc:CartesianChart.AxisX>
                             <lvc:CartesianChart.AxisY>
-                                <lvc:Axis LabelFormatter="{Binding RevenueFormatter}"/>
+                                <lvc:Axis LabelFormatter="{Binding RevenueFormatter}" MinValue="0"></lvc:Axis>
                             </lvc:CartesianChart.AxisY>
                         </lvc:CartesianChart>
                     </Grid>
@@ -120,12 +117,16 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Tình trạng vé (Bán/Trống)" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107"/>
+
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,10">
                             <RadioButton x:Name="WeekFilterButton" Content="Tuần" IsChecked="True" GroupName="Filter" Foreground="White" Margin="0,0,10,0" Click="FilterButton_Click"/>
                             <RadioButton x:Name="MonthFilterButton" Content="Tháng" GroupName="Filter" Foreground="White" Margin="0,0,10,0" Click="FilterButton_Click"/>
                             <RadioButton x:Name="YearFilterButton" Content="Năm" GroupName="Filter" Foreground="White" Click="FilterButton_Click"/>
                         </StackPanel>
-                        <lvc:CartesianChart x:Name="OccupancyChart" Grid.Row="2" LegendLocation="Bottom" Background="Transparent" Series="{Binding OccupancySeries}">
+
+                        <lvc:CartesianChart x:Name="OccupancyChart" Grid.Row="2" LegendLocation="Bottom" Background="Transparent" 
+                                            Series="{Binding OccupancySeries}"
+                                            DataClick="OccupancyChart_DataClick" >
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis LabelsRotation="0" Labels="{Binding OccupancyLabels}">
                                     <lvc:Axis.Separator>
@@ -133,6 +134,9 @@
                                     </lvc:Axis.Separator>
                                 </lvc:Axis>
                             </lvc:CartesianChart.AxisX>
+                            <lvc:CartesianChart.AxisY>
+                                <lvc:Axis LabelFormatter="{Binding RevenueFormatter}"></lvc:Axis>
+                            </lvc:CartesianChart.AxisY>
                         </lvc:CartesianChart>
                     </Grid>
                 </Border>
@@ -151,6 +155,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Tỷ lệ vé bán (Top 5)" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" Margin="0,0,0,10"/>
+
                         <lvc:PieChart x:Name="ShowPieChart" Grid.Row="1" LegendLocation="Right" InnerRadius="0" Hoverable="True" Series="{Binding PieSeries}"/>
                     </Grid>
                 </Border>
@@ -162,6 +167,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Chi tiết Top 5 Vở diễn" FontSize="16" FontWeight="SemiBold" Foreground="#FFFFC107" Margin="0,0,0,10"/>
+
                         <DataGrid Grid.Row="1" x:Name="TopShowsGrid" ItemsSource="{Binding TopShowsList}"
                                   IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
                                   Background="Transparent" RowBackground="Transparent" Foreground="White" BorderThickness="0"

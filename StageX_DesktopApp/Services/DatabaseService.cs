@@ -552,14 +552,18 @@ namespace StageX_DesktopApp.Services
         }
 
         // [HÀM BỊ THIẾU - NGUYÊN NHÂN LỖI]
-        public async Task<List<TopShow>> GetTopShowsAsync()
+        public async Task<List<TopShow>> GetTopShowsAsync(DateTime? start = null, DateTime? end = null)
         {
-            using (var context = new AppDbContext())
-            {
-                return await context.TopShows
-                    .FromSqlRaw("CALL proc_top5_shows_by_tickets()")
-                    .ToListAsync();
-            }
+            using var context = new AppDbContext();
+
+            // Chuyển ngày sang chuỗi SQL chuẩn hoặc NULL nếu không lọc
+            string sStart = start.HasValue ? $"'{start.Value:yyyy-MM-dd HH:mm:ss}'" : "NULL";
+            string sEnd = end.HasValue ? $"'{end.Value:yyyy-MM-dd HH:mm:ss}'" : "NULL";
+
+            // Gọi Stored Procedure mới
+            return await context.TopShows
+                .FromSqlRaw($"CALL proc_top5_shows_by_date_range({sStart}, {sEnd})")
+                .ToListAsync();
         }
 
         // [HÀM BỔ SUNG CHO FILTER NGÀY]

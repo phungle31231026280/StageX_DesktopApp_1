@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LiveCharts;
 using LiveCharts.Wpf;
+using Microsoft.EntityFrameworkCore;
+using StageX_DesktopApp.Data;
 using StageX_DesktopApp.Models;
 using StageX_DesktopApp.Services;
 using System;
@@ -15,36 +17,44 @@ namespace StageX_DesktopApp.ViewModels
     {
         private readonly DatabaseService _dbService;
 
-        // KPI
+        // --- CÁC BIẾN KPI ---
         [ObservableProperty] private string _revenueText = "0đ";
         [ObservableProperty] private string _orderText = "0";
         [ObservableProperty] private string _showText = "0";
         [ObservableProperty] private string _genreText = "0";
 
-        // Charts
+        // --- BIỂU ĐỒ DOANH THU ---
         [ObservableProperty] private SeriesCollection _revenueSeries;
         [ObservableProperty] private string[] _revenueLabels;
         public Func<double, string> RevenueFormatter { get; set; } = value => value.ToString("N0");
 
+        // --- BIỂU ĐỒ TÌNH TRẠNG VÉ (OCCUPANCY) ---
         [ObservableProperty] private SeriesCollection _occupancySeries;
         [ObservableProperty] private List<string> _occupancyLabels;
 
-        [ObservableProperty] private SeriesCollection _pieSeries;
+        // [SỬA LỖI 1]: Thêm biến này và để public để View gọi được
+        public string CurrentOccupancyFilter { get; set; } = "week";
 
-        // Top Shows
+        // --- BIỂU ĐỒ TRÒN & BẢNG TOP 5 ---
+        [ObservableProperty] private SeriesCollection _pieSeries;
         [ObservableProperty] private List<TopShowModel> _topShowsList;
 
         public DashboardViewModel()
         {
             _dbService = new DatabaseService();
-            // Chạy trên UI thread để tránh lỗi Threading khi cập nhật Collection
-            System.Windows.Application.Current.Dispatcher.Invoke(async () => await LoadData());
+
+            // Khởi tạo collection rỗng
+            RevenueSeries = new SeriesCollection();
+            OccupancySeries = new SeriesCollection();
+            PieSeries = new SeriesCollection();
+            TopShowsList = new List<TopShowModel>();
         }
 
-        private async Task LoadData()
+        // Hàm này View sẽ gọi
+        public async Task LoadData()
         {
             await LoadSummary();
-            await LoadRevenueChart();
+            await LoadRevenueChart();    // [SỬA LỖI 2]: Gọi đúng tên hàm
             await LoadOccupancy("week");
             await LoadPieChart();
             await LoadTopShows();
@@ -62,67 +72,154 @@ namespace StageX_DesktopApp.ViewModels
             }
         }
 
-        // --- LOGIC BIỂU ĐỒ DOANH THU (GIỐNG CODE CŨ) ---
+        // [SỬA LỖI 2]: Đặt tên thống nhất là LoadRevenueChart
         private async Task LoadRevenueChart()
         {
-            var rawData = await _dbService.GetRevenueMonthlyAsync();
-
-            // 1. Parse dữ liệu
-            var parsedData = rawData
-                .Select(r => new { Date = DateTime.ParseExact(r.month, "MM/yyyy", null), Total = r.total_revenue })
-                .OrderBy(x => x.Date)
-                .ToList();
-
-            // 2. Lấp đầy khoảng trống (Fill Gaps) - Logic từ code cũ
-            var chartValues = new ChartValues<double>();
-            var labels = new List<string>();
-
-            if (parsedData.Any())
+            try
             {
-                var minDate = parsedData.First().Date;
-                var maxDate = parsedData.Last().Date;
+                var rawData = await _dbService.GetRevenueMonthlyAsync();
+                var historyData = new List<RevenueInput>();
 
-                // Chạy từ tháng đầu đến tháng cuối
-                for (var d = minDate; d <= maxDate; d = d.AddMonths(1))
+                if (rawData.Any())
                 {
-                    var existing = parsedData.FirstOrDefault(x => x.Date.Year == d.Year && x.Date.Month == d.Month);
-                    double val = existing != null ? (double)existing.Total : 0;
+                    var parsed = rawData.Select(r => {
+                        // Ưu tiên parse yyyy-MM-01 (từ code SQL mới)
+                        if (DateTime.TryParse(r.month, out DateTime dt))
+                            return new RevenueInput { Date = dt, TotalRevenue = (float)r.total_revenue };
+                        // Fallback cho định dạng cũ MM/yyyy
+                        if (DateTime.TryParseExact(r.month, "MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime dt2))
+                            return new RevenueInput { Date = dt2, TotalRevenue = (float)r.total_revenue };
+                        return null;
+                    }).Where(x => x != null).OrderBy(x => x.Date).ToList();
 
-                    chartValues.Add(val);
-                    labels.Add(d.ToString("MM/yyyy"));
+                    if (parsed.Any())
+                    {
+                        var minDate = parsed.First().Date;
+                        var maxDate = parsed.Last().Date;
+                        for (var d = minDate; d <= maxDate; d = d.AddMonths(1))
+                        {
+                            var existing = parsed.FirstOrDefault(x => x.Date.Year == d.Year && x.Date.Month == d.Month);
+                            historyData.Add(existing ?? new RevenueInput { Date = d, TotalRevenue = 0 });
+                        }
+                    }
                 }
+
+                // ML.NET Forecast
+                bool canForecast = historyData.Count >= 6;
+                int horizon = 3;
+                RevenueForecast prediction = null;
+
+                if (canForecast)
+                {
+                    try
+                    {
+                        var mlService = new RevenueForecastingService();
+                        prediction = mlService.Predict(historyData, horizon);
+                    }
+                    catch { /* Ignore ML errors */ }
+                }
+
+                var chartValuesHistory = new ChartValues<double>();
+                var chartValuesForecast = new ChartValues<double>();
+                var labels = new List<string>();
+
+                foreach (var item in historyData)
+                {
+                    chartValuesHistory.Add(item.TotalRevenue);
+                    chartValuesForecast.Add(double.NaN);
+                    labels.Add(item.Date.ToString("MM/yyyy"));
+                }
+
+                if (prediction != null)
+                {
+                    chartValuesForecast.RemoveAt(chartValuesForecast.Count - 1);
+                    chartValuesForecast.Add(historyData.Last().TotalRevenue);
+
+                    DateTime lastDate = historyData.Last().Date;
+                    for (int i = 0; i < horizon; i++)
+                    {
+                        float val = prediction.ForecastedRevenue[i];
+                        if (val < 0) val = 0;
+                        chartValuesForecast.Add(val);
+                        labels.Add(lastDate.AddMonths(i + 1).ToString("MM/yyyy"));
+                    }
+                }
+
+                RevenueSeries = new SeriesCollection
+                {
+                    new LineSeries
+                    {
+                        Title = "Thực tế",
+                        Values = chartValuesHistory,
+                        Stroke = new SolidColorBrush(Color.FromRgb(255, 193, 7)),
+                        Fill = Brushes.Transparent,
+                        PointGeometrySize = 10
+                    }
+                };
+
+                if (prediction != null)
+                {
+                    RevenueSeries.Add(new LineSeries
+                    {
+                        Title = "Dự báo",
+                        Values = chartValuesForecast,
+                        Stroke = Brushes.Cyan,
+                        Fill = Brushes.Transparent,
+                        PointGeometrySize = 10,
+                        StrokeDashArray = new DoubleCollection { 4 }
+                    });
+                }
+                RevenueLabels = labels.ToArray();
             }
-
-            RevenueSeries = new SeriesCollection
-            {
-                new LineSeries
-                {
-                    Title = "Doanh thu",
-                    Values = chartValues,
-                    Stroke = new SolidColorBrush(Color.FromRgb(255, 193, 7)), // Vàng
-                    Fill = Brushes.Transparent, // Không tô nền dưới
-                    PointGeometrySize = 10
-                }
-            };
-            RevenueLabels = labels.ToArray();
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Revenue Error: " + ex.Message); }
         }
 
-        // --- LOGIC BIỂU ĐỒ TÌNH TRẠNG VÉ ---
         public async Task LoadOccupancy(string filter)
         {
-            var data = await _dbService.GetOccupancyDataAsync(filter);
+            CurrentOccupancyFilter = filter; // Cập nhật biến Filter
 
+            var data = await _dbService.GetOccupancyDataAsync(filter);
             var sold = new ChartValues<double>();
             var unsold = new ChartValues<double>();
             var labels = new List<string>();
 
-            foreach (var item in data)
+            // Ép thời gian về 2025 (như code trước)
+            var anchorDate = new DateTime(2025, 11, 30);
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+
+            if (filter == "year")
             {
-                labels.Add(item.period);
-                sold.Add((double)item.sold_tickets);
-                // Giả lập unsold (như code cũ) hoặc lấy từ DB nếu có
-                double u = item.unsold_tickets > 0 ? item.unsold_tickets : (double)item.sold_tickets * 0.3;
-                unsold.Add(u);
+                foreach (var item in data)
+                {
+                    labels.Add(item.period);
+                    sold.Add((double)item.sold_tickets);
+                    unsold.Add((double)item.sold_tickets * 0.3);
+                }
+            }
+            else if (filter == "month")
+            {
+                var cal = culture.Calendar;
+                var currentWeek = cal.GetWeekOfYear(anchorDate, System.Globalization.CalendarWeekRule.FirstDay, DayOfWeek.Monday);
+                for (int i = 3; i >= 0; i--)
+                {
+                    int weekNum = currentWeek - i;
+                    if (weekNum <= 0) weekNum += 52;
+                    string key = $"Tuần {weekNum}";
+                    var item = data.FirstOrDefault(x => x.period == key);
+                    double s = item != null ? (double)item.sold_tickets : 0;
+                    labels.Add(key); sold.Add(s); unsold.Add(s > 0 ? s * 0.4 : 0);
+                }
+            }
+            else // week
+            {
+                for (int i = 6; i >= 0; i--)
+                {
+                    var d = anchorDate.AddDays(-i);
+                    string key = d.ToString("dd/MM", culture);
+                    var item = data.FirstOrDefault(x => x.period == key);
+                    double s = item != null ? (double)item.sold_tickets : 0;
+                    labels.Add(key); sold.Add(s); unsold.Add(s > 0 ? s * 0.5 : 0);
+                }
             }
 
             OccupancySeries = new SeriesCollection
@@ -133,9 +230,10 @@ namespace StageX_DesktopApp.ViewModels
             OccupancyLabels = labels;
         }
 
-        private async Task LoadPieChart()
+        // [SỬA LỖI 3]: Đổi private thành public để View gọi được
+        public async Task LoadPieChart(DateTime? start = null, DateTime? end = null)
         {
-            var topShows = await _dbService.GetTopShowsAsync();
+            var topShows = await _dbService.GetTopShowsAsync(start, end);
             var series = new SeriesCollection();
             foreach (var show in topShows)
             {
@@ -150,9 +248,10 @@ namespace StageX_DesktopApp.ViewModels
             PieSeries = series;
         }
 
-        private async Task LoadTopShows()
+        // [SỬA LỖI 3]: Đổi private thành public để View gọi được
+        public async Task LoadTopShows(DateTime? start = null, DateTime? end = null)
         {
-            var shows = await _dbService.GetTopShowsAsync();
+            var shows = await _dbService.GetTopShowsAsync(start, end);
             TopShowsList = shows.Select((s, i) => new TopShowModel
             {
                 Index = i + 1,
