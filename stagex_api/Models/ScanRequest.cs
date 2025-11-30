@@ -1,7 +1,7 @@
 namespace Stagex.Api.Models
 {
     public class ScanRequest
-    {>
+    {
         /// <summary>
         /// Không biết cái nào, có phải ticket_code không nên để luôn, nữa sửa đi nha
         /// </summary>

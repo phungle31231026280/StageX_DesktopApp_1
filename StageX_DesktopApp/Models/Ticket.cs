@@ -22,6 +22,12 @@ namespace StageX_DesktopApp.Models
         [Column("status")]
         public string Status { get; set; }
 
+        [Column("created_at")]
+        public DateTime? CreatedAt { get; set; }
+
+        [Column("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
+
         public virtual Booking Booking { get; set; }
         public virtual Seat Seat { get; set; }
     }
