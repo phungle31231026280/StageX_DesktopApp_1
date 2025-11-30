@@ -7,6 +7,5 @@
         <util:InvertBoolConverter x:Key="InvertBoolConverter"/>
 
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
     </Application.Resources>
 </Application>

@@ -184,11 +184,10 @@
                                     <TextBlock Text="Chọn Hạng ghế:" Margin="0,5,0,5" Foreground="Gray"/>
                                     <ComboBox x:Name="AssignCategoryComboBox" ItemsSource="{Binding Categories}" DisplayMemberPath="CategoryName" SelectedValuePath="CategoryId"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="Áp dụng" Style="{StaticResource ButtonSpecialStyle}" VerticalAlignment="Bottom" Margin="0,0,0,1" Click="AssignSeatButton_Click"/>
+                                <Button Grid.Column="1" Content="Áp dụng" Style="{StaticResource ButtonSpecialStyle}" VerticalAlignment="Bottom" Margin="0,0,0,1" Click="AssignSeatButton_Click" Height="22"/>
                             </Grid>
-
-                            <Button Content="Xóa ghế đang chọn" Background="#FFDC3545" Foreground="White" Padding="8" FontWeight="Bold" Margin="0,10,0,0" 
-                                    Click="RemoveSelectedSeats_Click" Visibility="{Binding IsCreatingNew, Converter={StaticResource BoolToVis}}"/>
+                            <Button Content="Xóa ghế đang chọn" Style="{StaticResource ButtonDeleteStyle}" Margin="0,15,0,0" Height="22"
+                                    Click="RemoveSelectedSeats_Click" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
 
                             <Separator Background="#333" Margin="0,15"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -246,7 +245,7 @@ RowHeight="31">
                                         <Button Content="Xem" 
                         Command="{Binding DataContext.SelectTheaterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                         CommandParameter="{Binding}"
-                        Height="28" Padding="0" Width="80"
+                        Height="28" Padding="0" Width="140"
                         HorizontalAlignment="Center">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ButtonViewStyle}">

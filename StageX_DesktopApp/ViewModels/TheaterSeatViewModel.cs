@@ -225,7 +225,6 @@ namespace StageX_DesktopApp.ViewModels
 
             // Xóa khỏi danh sách bộ nhớ
             foreach (var s in selectedSeats) CurrentSeats.Remove(s);
-
             // Bắn sự kiện để vẽ lại (View sẽ lo việc tính toán lại số ghế)
             RequestDrawSeats?.Invoke(CurrentSeats);
         }
@@ -246,5 +245,7 @@ namespace StageX_DesktopApp.ViewModels
 
         [RelayCommand] private void EditCategory(SeatCategory c) { CategoryName = c.CategoryName; CategoryPrice = c.BasePrice.ToString("F0"); EditingCategoryId = c.CategoryId; CategoryBtnContent = "Lưu"; }
         [RelayCommand] private async Task DeleteCategory(SeatCategory c) { if (MessageBox.Show("Xóa hạng này?", "Xác nhận", MessageBoxButton.YesNo) == MessageBoxResult.Yes) { await _dbService.DeleteSeatCategoryAsync(c.CategoryId); await LoadData(); } }
+
+
     }
 }

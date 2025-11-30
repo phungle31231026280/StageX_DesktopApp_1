@@ -168,8 +168,8 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                        <Button Content="{Binding SaveButtonContent}" Command="{Binding SaveCommand}" Style="{StaticResource ButtonAddStyle}" Width="160" Height="32"/>
-                        <Button Content="Làm mới / Hủy" Command="{Binding ClearCommand}" Style="{StaticResource ButtonNormalStyle}" Margin="10,0,0,0" Width="160" Height="32"/>
+                        <Button Content="{Binding SaveBtnContent}" Style="{StaticResource ButtonAddStyle}" Width="200" Height="32" Click="SaveButton_Click"/>
+                        <Button Content="Làm mới / Hủy" Command="{Binding ClearCommand}" Style="{StaticResource ButtonNormalStyle}" Margin="10,0,0,0" Width="200" Height="32"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Text.RegularExpressions;
 
 namespace StageX_DesktopApp.ViewModels
 {
@@ -90,7 +91,11 @@ namespace StageX_DesktopApp.ViewModels
                 MessageBox.Show("Vui lòng nhập đủ thông tin!");
                 return;
             }
-
+            if (!IsValidEmail(Email))
+            {
+                MessageBox.Show("Email không đúng định dạng! (Ví dụ đúng: ten@gmail.com)", "Lỗi Email", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return; // Dừng ngay lập tức
+            }
             try
             {
                 var user = new User
@@ -148,7 +153,18 @@ namespace StageX_DesktopApp.ViewModels
                 MessageBox.Show("Lỗi: " + ex.Message);
             }
         }
-
+        private bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return false;
+            try
+            {
+                // Regex: Phải có ký tự + @ + ký tự + . + ký tự (ít nhất 2 chữ cái)
+                return Regex.IsMatch(email,
+                    @"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$",
+                    RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(250));
+            }
+            catch (RegexMatchTimeoutException) { return false; }
+        }
         [RelayCommand]
         private async Task Delete(User user)
         {

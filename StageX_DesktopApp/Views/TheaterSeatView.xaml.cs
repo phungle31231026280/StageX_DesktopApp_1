@@ -54,15 +54,33 @@ namespace StageX_DesktopApp.Views
 
                     if (seatList == null || seatList.Count == 0) return;
 
+                    // 1. Tìm thông số max (Hàng cuối cùng và Cột lớn nhất)
                     int maxSeatNum = seatList.Max(s => s.SeatNumber);
 
-                    var rowsGroup = seatList
-                        .Where(s => !string.IsNullOrEmpty(s.RowChar))
-                        .GroupBy(s => s.RowChar.Trim().ToUpper())
-                        .OrderBy(g => g.Key.Length).ThenBy(g => g.Key)
+                    // Lấy danh sách các hàng hiện có (VD: A, C, D)
+                    var distinctRowChars = seatList
+                        .Select(s => s.RowChar.Trim().ToUpper())
+                        .Distinct()
                         .ToList();
 
-                    // Sử dụng StackPanel để xếp các hàng dọc
+                    // Tìm hàng "lớn nhất" theo thứ tự alphabet (VD: D)
+                    string maxRowChar = distinctRowChars
+                        .OrderByDescending(r => r.Length).ThenByDescending(r => r)
+                        .FirstOrDefault();
+
+                    // Hàm phụ trợ: Đổi chữ sang số (A->0, B->1...)
+                    int RowCharToIndex(string row)
+                    {
+                        if (string.IsNullOrEmpty(row)) return 0;
+                        return (int)(row[0] - 'A'); // Chỉ hỗ trợ A-Z đơn giản, nếu AA thì cần logic khác
+                    }
+
+                    // Hàm phụ trợ: Đổi số sang chữ (0->A, 1->B...)
+                    string IndexToRowChar(int index) => ((char)('A' + index)).ToString();
+
+                    int maxRowIndex = RowCharToIndex(maxRowChar);
+
+                    // StackPanel chính (Dọc)
                     StackPanel mainPanel = new StackPanel
                     {
                         Orientation = Orientation.Vertical,
@@ -70,60 +88,76 @@ namespace StageX_DesktopApp.Views
                         VerticalAlignment = VerticalAlignment.Top
                     };
 
-                    foreach (var group in rowsGroup)
+                    // 2. Vòng lặp từ A -> Hàng cuối cùng (VD: 0->3 cho A->D)
+                    // Dù hàng B (index 1) bị xóa, vòng lặp vẫn chạy qua nó
+                    for (int i = 0; i <= maxRowIndex; i++)
                     {
-                        // StackPanel ngang cho từng hàng ghế
-                        StackPanel rowPanel = new StackPanel
+                        string currentRowChar = IndexToRowChar(i);
+
+                        // Lấy tất cả ghế của hàng này
+                        var seatsInRow = seatList.Where(s => s.RowChar == currentRowChar).OrderBy(s => s.SeatNumber).ToList();
+
+                        if (seatsInRow.Count > 0)
                         {
-                            Orientation = Orientation.Horizontal,
-                            Margin = new Thickness(0, 0, 0, 4), // Khoảng cách giữa các hàng
-                            HorizontalAlignment = HorizontalAlignment.Center
-                        };
-
-                        // Tên Hàng (A, B...)
-                        TextBlock rowLabel = new TextBlock
-                        {
-                            Text = group.Key,
-                            Width = 25,
-                            VerticalAlignment = VerticalAlignment.Center,
-                            FontWeight = FontWeights.Bold,
-                            Foreground = Brushes.Gray,
-                            FontSize = 12, // Chữ tên hàng vừa phải
-                            Margin = new Thickness(0, 0, 8, 0), // Cách ghế ra một chút
-                            TextAlignment = TextAlignment.Right
-                        };
-                        rowPanel.Children.Add(rowLabel);
-
-                        // Logic đếm lại số ghế thực tế
-                        int realCount = 1;
-
-                        for (int i = 1; i <= maxSeatNum; i++)
-                        {
-                            var seat = group.FirstOrDefault(s => s.SeatNumber == i);
-
-                            if (seat != null)
+                            // === TRƯỜNG HỢP: HÀNG CÓ GHẾ (Vẽ bình thường) ===
+                            StackPanel rowPanel = new StackPanel
                             {
-                                seat.RealSeatNumber = realCount;
-                                realCount++;
+                                Orientation = Orientation.Horizontal,
+                                Margin = new Thickness(0, 0, 0, 4),
+                                HorizontalAlignment = HorizontalAlignment.Center
+                            };
 
-                                var btn = CreateSeatButton(seat);
-                                rowPanel.Children.Add(btn);
-                            }
-                            else
+                            // Tên hàng
+                            TextBlock rowLabel = new TextBlock
                             {
-                                // Vẽ ghế trống (Spacer) để giữ vị trí cột
-                                var spacer = new Border
+                                Text = currentRowChar,
+                                Width = 25,
+                                VerticalAlignment = VerticalAlignment.Center,
+                                FontWeight = FontWeights.Bold,
+                                Foreground = Brushes.Gray,
+                                FontSize = 12,
+                                Margin = new Thickness(0, 0, 8, 0),
+                                TextAlignment = TextAlignment.Right
+                            };
+                            rowPanel.Children.Add(rowLabel);
+
+                            // Vẽ từng ghế trong hàng
+                            // (Giữ nguyên logic vẽ ghế cũ của bạn)
+                            for (int j = 1; j <= maxSeatNum; j++)
+                            {
+                                var seat = seatsInRow.FirstOrDefault(s => s.SeatNumber == j);
+                                if (seat != null)
                                 {
-                                    Width = 30,  // Bằng kích thước nút
-                                    Height = 26, // Bằng kích thước nút
-                                    Margin = new Thickness(2), // Bằng margin nút
-                                    Background = Brushes.Transparent
-                                };
-                                rowPanel.Children.Add(spacer);
+                                    var btn = CreateSeatButton(seat);
+                                    rowPanel.Children.Add(btn);
+                                }
+                                else
+                                {
+                                    // Ghế trống (Spacer cột)
+                                    var spacer = new Border { Width = 30, Height = 26, Margin = new Thickness(2), Background = Brushes.Transparent };
+                                    rowPanel.Children.Add(spacer);
+                                }
                             }
+                            mainPanel.Children.Add(rowPanel);
                         }
-                        mainPanel.Children.Add(rowPanel);
+                        else
+                        {
+                            // === TRƯỜNG HỢP: HÀNG BỊ XÓA (Vẽ Lối đi) ===
+                            // Tạo một khoảng trống có chiều cao bằng 1 hàng ghế
+                            Border aisleSpacer = new Border
+                            {
+                                Height = 30, // Chiều cao lối đi (bằng height nút + margin)
+                                Background = Brushes.Transparent,
+                                Margin = new Thickness(0, 5, 0, 5) // Cách trên dưới 1 chút
+                            };
+
+                            // Tùy chọn: Thêm chữ "LỐI ĐI" nếu muốn
+                            // aisleSpacer.Child = new TextBlock { Text = "LỐI ĐI", Foreground = Brushes.DarkGray, ... };
+
+                            mainPanel.Children.Add(aisleSpacer);
+                        }
                     }
+
                     SeatMapGrid.Children.Add(mainPanel);
                 }
                 catch (Exception ex) { MessageBox.Show("Lỗi vẽ sơ đồ: " + ex.Message); }
@@ -268,7 +302,6 @@ namespace StageX_DesktopApp.Views
         {
             if (DataContext is TheaterSeatViewModel vm)
             {
-                if (!vm.IsCreatingNew) { MessageBox.Show("Chỉ được xóa ghế khi tạo rạp mới!"); return; }
                 if (_selectedSeats.Count == 0) return;
 
                 vm.RemoveSeats(_selectedSeats);

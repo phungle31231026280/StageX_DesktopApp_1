@@ -112,6 +112,7 @@ namespace StageX_DesktopApp.ViewModels
                 {
                     await _dbService.DeleteActorAsync(actor.ActorId);
                     await LoadActors();
+                    MessageBox.Show("Đã xóa tài khoản thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch
                 {
