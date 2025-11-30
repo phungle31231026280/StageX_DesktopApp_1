@@ -24,12 +24,16 @@
         <Border Grid.Row="1" Background="#FF0C1220" CornerRadius="8" Padding="20" Margin="0,0,0,20">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="15"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                <StackPanel Grid.Column="0">
                     <TextBlock Text="Tra cứu (Mã, Tên):" Foreground="Gray" Margin="0,0,0,5"/>
                     <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource InputStyle}">
                         <TextBox.InputBindings>
@@ -38,7 +42,7 @@
                     </TextBox>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                <StackPanel Grid.Column="2">
                     <TextBlock Text="Trạng thái:" Foreground="Gray" Margin="0,0,0,5"/>
                     <ComboBox SelectedIndex="{Binding StatusIndex}" Padding="8" FontSize="14" Style="{StaticResource InputStyle}">
                         <ComboBoxItem Content="-- Tất cả --"/>
@@ -48,8 +52,19 @@
                     </ComboBox>
                 </StackPanel>
 
-                <Button Grid.Column="2" Content="🔍 Tìm kiếm" Style="{StaticResource ButtonSearchStyle}" 
-                        VerticalAlignment="Bottom" Command="{Binding FilterCommand}"/>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="Ngày tạo đơn:" Foreground="Gray" Margin="0,0,0,5"/>
+                    <DatePicker SelectedDate="{Binding SelectedDate}" Style="{StaticResource InputStyle}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Content="🔍 Lọc" Style="{StaticResource ButtonSearchStyle}" 
+                Width="80" Command="{Binding FilterCommand}"/>
+                    <Button Content="Làm mới" Style="{StaticResource ButtonNormalStyle}" 
+            Margin="10,0,0,0" Padding="0" Width="80"
+            Command="{Binding RefreshCommand}"/>
+
+                    </StackPanel>
             </Grid>
         </Border>
 
