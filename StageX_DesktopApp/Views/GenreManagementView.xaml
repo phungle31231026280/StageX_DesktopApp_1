@@ -12,53 +12,6 @@
         <vm:GenreViewModel />
     </UserControl.DataContext>
 
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
-        <Style x:Key="ButtonActionStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="Content" Value="Thêm">
-                    <Setter Property="Background" Value="#FF198754"/>
-                </Trigger>
-                <Trigger Property="Content" Value="Cập nhật">
-                    <Setter Property="Background" Value="#FFffc107"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="ButtonCancelStyle" TargetType="Button">
-            <Setter Property="Background" Value="Gray"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-
-        <Style x:Key="GridBtnEdit" TargetType="Button">
-            <Setter Property="Background" Value="#FF0D6EFD"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="MinWidth" Value="70"/>
-            <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <Style x:Key="GridBtnDelete" TargetType="Button">
-            <Setter Property="Background" Value="#FFDC3545"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="MinWidth" Value="70"/>
-            <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <Style x:Key="LeftCell" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="10,0,0,0"/>
-        </Style>
-    </UserControl.Resources>
-
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="25">
             <TextBlock Text="QUẢN LÝ THỂ LOẠI" FontSize="24" FontWeight="Bold" Foreground="#FFffc107" Margin="0,0,0,20"/>
@@ -80,7 +33,7 @@
                         <Button Grid.Column="1" 
                                 Content="{Binding SaveButtonContent}" 
                                 Command="{Binding SaveDataCommand}"
-                                Style="{StaticResource ButtonActionStyle}" 
+                                Style="{StaticResource ButtonAddStyle}" 
                                 Margin="10,0,0,0" MinWidth="80"/>
 
                         <Button Grid.Column="2" Content="Hủy" 
