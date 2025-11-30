@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using StageX_DesktopApp.Services;
 
 namespace StageX_DesktopApp.Views
 {
@@ -179,6 +180,7 @@ namespace StageX_DesktopApp.Views
 
                 doc.Save(filePath);
                 Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+                SoundManager.PlaySuccess();
             }
             catch (Exception ex) { MessageBox.Show("Lỗi PDF: " + ex.Message); }
         }

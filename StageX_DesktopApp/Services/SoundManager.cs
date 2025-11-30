@@ -30,13 +30,10 @@ namespace StageX_DesktopApp.Services
                 }
                 else
                 {
-                    // Fallback nếu không tìm thấy file (chỉ để debug)
-                    // System.Diagnostics.Debug.WriteLine($"Sound not found: {fullPath}");
                 }
             }
             catch
             {
-                // Bỏ qua lỗi âm thanh để không crash app
             }
         }
     }
