@@ -251,7 +251,7 @@ namespace StageX_DesktopApp.ViewModels
         private void ResetToCreateMode()
         {
             IsCreatingNew = true; IsReadOnlyMode = false;
-            PanelTitle = "1. TẠO RẠP MỚI (Xem trước)"; SaveBtnContent = "Lưu rạp mới";
+            PanelTitle = "1. TẠO RẠP MỚI" ; SaveBtnContent = "Lưu rạp mới";
             SelectedTheater = null; InputTheaterName = ""; InputRows = ""; InputCols = "";
             CurrentSeats.Clear(); RefreshVisualMap();
         }
