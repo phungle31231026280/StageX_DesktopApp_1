@@ -169,33 +169,6 @@ namespace StageX_DesktopApp.Views
                     gfx.DrawString($"{ticket.Price:N0} đ", fontTitle, textGold, pageWidth - leftX - 100, y + 0);
                     y += 40;
 
-                    // 1. Vẽ Barcode thật
-                    if (!string.IsNullOrEmpty(ticket.TicketCode))
-                    {
-                        // Tạo ảnh barcode từ mã vé
-                        XImage barcodeImg = GenerateBarcodeXImage(ticket.TicketCode);
-
-                        if (barcodeImg != null)
-                        {
-                            double barcodeWidth = 150; // Chiều rộng barcode trên PDF
-                            double barcodeHeight = 25; // Chiều cao barcode
-                            double barcodeX = (pageWidth - barcodeWidth) / 2; // Căn giữa
-
-                            // Vẽ ảnh Barcode
-                            gfx.DrawImage(barcodeImg, barcodeX, y, barcodeWidth, barcodeHeight);
-                            y += barcodeHeight + 2; // Xuống dòng
-                        }
-                    }
-
-                    // 2. Vẽ mã số dưới Barcode (để người dùng đọc được nếu không quét được)
-                    gfx.DrawString(ticket.TicketCode, fontNormal, XBrushes.Black, // In màu đen đè lên nền trắng (nếu có nền) hoặc màu trắng lên nền đen
-                                   new XRect(0, y, pageWidth, 10), XStringFormats.TopCenter);
-
-                    // *Lưu ý nhỏ:* Vì nền vé của bạn là màu tối (bgBrush = 26,26,26), 
-                    // Barcode màu đen sẽ không nhìn thấy. Bạn cần vẽ một ô trắng nền cho Barcode.
-
-                    // [CODE SỬA LẠI HOÀN CHỈNH CHO PHẦN BARCODE TRÊN NỀN TỐI]
-
                     // Tính toán vị trí
                     double bcW = 160;
                     double bcH = 35;
