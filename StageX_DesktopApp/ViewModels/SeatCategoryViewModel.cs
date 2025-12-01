@@ -110,17 +110,42 @@ namespace StageX_DesktopApp.ViewModels
         {
             if (cat == null) return;
 
-            if (MessageBox.Show($"Xóa hạng ghế '{cat.CategoryName}'?", "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            try
             {
-                try
+                // 1. [KIỂM TRA RÀNG BUỘC] 
+                // Gọi hàm vừa viết bên Service để xem hạng ghế có đang được dùng không
+                bool isInUse = await _dbService.IsSeatCategoryInUseAsync(cat.CategoryId);
+
+                if (isInUse)
+                {
+                    MessageBox.Show($"Không thể xóa hạng ghế '{cat.CategoryName}'!\n\nLý do: Hạng ghế này đang được gán cho ghế trong Rạp.\nVui lòng gỡ bỏ hạng ghế này khỏi sơ đồ rạp trước khi xóa.",
+                                    "Không thể xóa",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning);
+                    return; // Dừng lại, không cho xóa
+                }
+
+                // 2. [XÁC NHẬN XÓA]
+                if (MessageBox.Show($"Bạn có chắc chắn muốn xóa hạng ghế '{cat.CategoryName}' không?",
+                                    "Xác nhận xóa",
+                                    MessageBoxButton.YesNo,
+                                    MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     await _dbService.DeleteSeatCategoryAsync(cat.CategoryId);
+                    MessageBox.Show("Đã xóa thành công!");
+
                     await LoadCategories();
+
+                    // Nếu đang sửa đúng cái vừa xóa thì reset form về trạng thái thêm mới
+                    if (CategoryId == cat.CategoryId)
+                    {
+                        Cancel();
+                    }
                 }
-                catch
-                {
-                    MessageBox.Show("Không thể xóa hạng ghế này (Đang được sử dụng cho ghế).");
-                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi xóa: " + ex.Message);
             }
         }
 
