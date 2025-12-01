@@ -231,59 +231,22 @@ namespace StageX_DesktopApp.Views
         // ==============================================================================
         //  HÀM CHỤP ẢNH CHẤT LƯỢNG CAO (FIX MỜ)
         // ==============================================================================
-        private XImage CaptureChartToXImage(UIElement element, int width, int height)
+        private XImage CaptureChartToXImage(UIElement original, int width, int height)
         {
             try
             {
-                // ====================================================
-                // 1. LƯU TRẠNG THÁI GỐC
-                // ====================================================
-                var originalTransform = element.RenderTransform;
-                var originalSize = element.RenderSize;
-
-                // Background
-                var originalBackground = (element as Control)?.Background;
-
-                // Tắt animation khi chụp
-                if (element is LiveCharts.Wpf.Charts.Base.Chart chart)
+                // 1) Clone element bằng VisualBrush
+                var visual = new DrawingVisual();
+                using (var dc = visual.RenderOpen())
                 {
-                    chart.DisableAnimations = true;
-                    chart.Hoverable = false;
-                    chart.DataTooltip = null;
+                    dc.DrawRectangle(new VisualBrush(original), null, new Rect(0, 0, width, height));
                 }
 
-                // ====================================================
-                // 2. TẠO KÍCH THƯỚC TẠM THỜI (KHÔNG ẢNH HƯỞNG UI)
-                // ====================================================
-                element.RenderTransform = Transform.Identity; // tránh zoom lệch
-
-                Size fake = new Size(width, height);
-                element.Measure(fake);
-                element.Arrange(new Rect(fake));
-                element.UpdateLayout();
-
-                // ====================================================
-                // 3. CHỤP ẢNH
-                // ====================================================
+                // 2) Render visual clone, KHÔNG ảnh hưởng UI thật
                 var bmp = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-                bmp.Render(element);
+                bmp.Render(visual);
 
-                // ====================================================
-                // 4. KHÔI PHỤC TRẠNG THÁI GỐC
-                // ====================================================
-                if (element is Control ctrl)
-                    ctrl.Background = originalBackground;
-
-                element.RenderTransform = originalTransform;
-
-                // Đây là phần QUAN TRỌNG để layout không bị nở ra
-                element.Measure(originalSize);
-                element.Arrange(new Rect(originalSize));
-                element.UpdateLayout();
-
-                // ====================================================
-                // 5. TRẢ VỀ XIMAGE
-                // ====================================================
+                // 3) Convert sang XImage
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(bmp));
 
@@ -291,7 +254,6 @@ namespace StageX_DesktopApp.Views
                 {
                     encoder.Save(ms);
                     ms.Position = 0;
-
                     return XImage.FromStream(new MemoryStream(ms.ToArray()));
                 }
             }
@@ -299,23 +261,6 @@ namespace StageX_DesktopApp.Views
             {
                 return null;
             }
-        }
-        private MemoryStream BitmapToStream(BitmapSource bmp)
-        {
-            var stream = new MemoryStream();
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bmp));
-            encoder.Save(stream);
-            stream.Position = 0;
-            return stream;
-        }
-
-        private XImage BitmapToXImage(BitmapSource bmp)
-        {
-            using var ms = BitmapToStream(bmp);
-            var bytes = ms.ToArray();
-            var tempMs = new MemoryStream(bytes);
-            return XImage.FromStream(tempMs);
         }
     }
 }
