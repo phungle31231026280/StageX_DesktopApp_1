@@ -235,49 +235,70 @@ namespace StageX_DesktopApp.Views
         {
             try
             {
-                // 1. Lưu trạng thái cũ
+                // ====================================================
+                // 1. LƯU TRẠNG THÁI GỐC
+                // ====================================================
+                var originalTransform = element.RenderTransform;
+                var originalSize = element.RenderSize;
+
+                // Background
                 var originalBackground = (element as Control)?.Background;
 
-                // 2. Ép nền màu tối cho ảnh (để khớp với PDF nền đen)
-                if (element is Control ctrl) ctrl.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                // Tắt animation khi chụp
                 if (element is LiveCharts.Wpf.Charts.Base.Chart chart)
                 {
                     chart.DisableAnimations = true;
                     chart.Hoverable = false;
-                    chart.DataTooltip = null; // Tắt tooltip để không bị dính vào ảnh
+                    chart.DataTooltip = null;
                 }
 
-                // 3. Ép Render lại với kích thước mới
-                var size = new Size(width, height);
-                element.Measure(size);
-                element.Arrange(new Rect(size));
-                element.UpdateLayout(); // Bắt buộc
+                // ====================================================
+                // 2. TẠO KÍCH THƯỚC TẠM THỜI (KHÔNG ẢNH HƯỞNG UI)
+                // ====================================================
+                element.RenderTransform = Transform.Identity; // tránh zoom lệch
 
-                // 4. Chụp
+                Size fake = new Size(width, height);
+                element.Measure(fake);
+                element.Arrange(new Rect(fake));
+                element.UpdateLayout();
+
+                // ====================================================
+                // 3. CHỤP ẢNH
+                // ====================================================
                 var bmp = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
                 bmp.Render(element);
 
-                // 5. Trả lại trạng thái cũ
-                if (element is Control ctrl2) ctrl2.Background = originalBackground;
-                if (element is LiveCharts.Wpf.Charts.Base.Chart chart2)
-                {
-                    chart2.DisableAnimations = false;
-                    chart2.Hoverable = true;
-                }
+                // ====================================================
+                // 4. KHÔI PHỤC TRẠNG THÁI GỐC
+                // ====================================================
+                if (element is Control ctrl)
+                    ctrl.Background = originalBackground;
 
-                // 6. Convert sang XImage
+                element.RenderTransform = originalTransform;
+
+                // Đây là phần QUAN TRỌNG để layout không bị nở ra
+                element.Measure(originalSize);
+                element.Arrange(new Rect(originalSize));
+                element.UpdateLayout();
+
+                // ====================================================
+                // 5. TRẢ VỀ XIMAGE
+                // ====================================================
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(bmp));
+
                 using (var ms = new MemoryStream())
                 {
                     encoder.Save(ms);
                     ms.Position = 0;
-                    // Copy ra stream mới để PDFSharp dùng (tránh lỗi stream closed)
-                    var resultMs = new MemoryStream(ms.ToArray());
-                    return XImage.FromStream(resultMs);
+
+                    return XImage.FromStream(new MemoryStream(ms.ToArray()));
                 }
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
         private MemoryStream BitmapToStream(BitmapSource bmp)
         {
